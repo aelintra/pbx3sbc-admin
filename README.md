@@ -31,6 +31,32 @@ Before installing this admin panel, you must have:
 
 ## Installation
 
+### Option 0: Docker MySQL Setup (For Testing/Development)
+
+If you want to use Docker for MySQL (useful for testing or when both services run in containers):
+
+```bash
+# Start MySQL container and initialize database
+./docker-setup.sh
+
+# Enable LAN access (if connecting from other machines)
+./docker-mysql-access.sh enable
+
+# Check access status
+./docker-mysql-access.sh status
+```
+
+Then configure your `.env` file:
+```env
+DB_HOST=127.0.0.1
+DB_PORT=3307
+DB_DATABASE=opensips
+DB_USERNAME=opensips
+DB_PASSWORD=opensips
+```
+
+See [DOCKER-SETUP.md](DOCKER-SETUP.md) for detailed Docker setup instructions and access management.
+
 ### Option 1: Automated Installation (Recommended)
 
 The repository includes an automated installer script that handles the entire setup process:
