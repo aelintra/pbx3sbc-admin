@@ -19,7 +19,7 @@
 - ✅ Established installation workflow (OpenSIPS first, then admin panel)
 
 ### 3. Database Setup and Configuration
-- ✅ Created MySQL database (`opensips`) and user (`opensips` user with password `rigmarole`)
+- ✅ Created MySQL database (`opensips`) and user (`opensips` user with password `password`)
 - ✅ Configured Laravel `.env` file with database credentials
 - ✅ Created OpenSIPS table creation scripts (`scripts/create-opensips-tables.sql` and `.sh`)
 - ✅ Created OpenSIPS database tables (domain, dispatcher, endpoint_locations)
@@ -27,7 +27,7 @@
 - ✅ Created admin user (`admin@example.com` / `opensips`)
 - ✅ Created OpensipsSeeder with sample data (3 domains, 4 dispatcher destinations)
 - ✅ Seeded database with sample data
-
+https://www.digitalocean.com/community/tutorials/how-to-allow-remote-access-to-mysql
 ### 4. Git Repository Setup
 - ✅ Initialized git repository
 - ✅ Created initial commit

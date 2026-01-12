@@ -88,7 +88,7 @@ mysql -u root
 
 # Then run these SQL commands:
 CREATE DATABASE IF NOT EXISTS opensips CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS 'opensips'@'localhost' IDENTIFIED BY 'rigmarole';
+CREATE USER IF NOT EXISTS 'opensips'@'localhost' IDENTIFIED BY 'password';
 GRANT ALL PRIVILEGES ON opensips.* TO 'opensips'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
@@ -99,7 +99,7 @@ EXIT;
 # Create database and user in one command
 mysql -u root <<EOF
 CREATE DATABASE IF NOT EXISTS opensips CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS 'opensips'@'localhost' IDENTIFIED BY 'rigmarole';
+CREATE USER IF NOT EXISTS 'opensips'@'localhost' IDENTIFIED BY 'password';
 GRANT ALL PRIVILEGES ON opensips.* TO 'opensips'@'localhost';
 FLUSH PRIVILEGES;
 EOF
@@ -111,7 +111,7 @@ EOF
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS opensips CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # Create user
-mysql -u root -e "CREATE USER IF NOT EXISTS 'opensips'@'localhost' IDENTIFIED BY 'rigmarole';"
+mysql -u root -e "CREATE USER IF NOT EXISTS 'opensips'@'localhost' IDENTIFIED BY 'password';"
 
 # Grant privileges
 mysql -u root -e "GRANT ALL PRIVILEGES ON opensips.* TO 'opensips'@'localhost';"
@@ -126,7 +126,7 @@ mysql -u root -e "FLUSH PRIVILEGES;"
 mysql -u root -e "SHOW DATABASES LIKE 'opensips';"
 
 # Test user connection
-mysql -u opensips -p'rigmarole' -e "SELECT USER(), DATABASE();"
+mysql -u opensips -p'password' -e "SELECT USER(), DATABASE();"
 ```
 
 **Date:** January 11, 2026  
@@ -134,7 +134,7 @@ mysql -u opensips -p'rigmarole' -e "SELECT USER(), DATABASE();"
 **Credentials:**
 - Database: `opensips`
 - User: `opensips`
-- Password: `rigmarole` (change in production!)
+- Password: `password` (change in production!)
 
 #### 4.2 Configure Laravel Environment
 
@@ -156,7 +156,7 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=opensips
 DB_USERNAME=opensips
-DB_PASSWORD=rigmarole
+DB_PASSWORD=password
 ```
 
 **Option 2: Using sed (non-interactive)**
@@ -167,7 +167,7 @@ sed -i '' 's/^# DB_HOST=/DB_HOST=/' .env
 sed -i '' 's/^# DB_PORT=/DB_PORT=/' .env
 sed -i '' 's/^# DB_DATABASE=.*/DB_DATABASE=opensips/' .env
 sed -i '' 's/^# DB_USERNAME=.*/DB_USERNAME=opensips/' .env
-sed -i '' 's/^# DB_PASSWORD=.*/DB_PASSWORD=rigmarole/' .env
+sed -i '' 's/^# DB_PASSWORD=.*/DB_PASSWORD=password/' .env
 
 # Note: On Linux, remove the '' after -i:
 # sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
@@ -182,7 +182,7 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=opensips
 DB_USERNAME=opensips
-DB_PASSWORD=rigmarole
+DB_PASSWORD=password
 EOF
 
 # Append to .env (after removing old DB_ lines if needed)
@@ -227,10 +227,10 @@ php artisan migrate:status
 
 ```bash
 # Option 1: Use the bash script (recommended)
-./scripts/create-opensips-tables.sh opensips rigmarole
+./scripts/create-opensips-tables.sh opensips password
 
 # Option 2: Use MySQL directly
-mysql -u opensips -p'rigmarole' opensips < scripts/create-opensips-tables.sql
+mysql -u opensips -p'password' opensips < scripts/create-opensips-tables.sql
 ```
 
 **Date:** January 11, 2026  
@@ -239,10 +239,10 @@ mysql -u opensips -p'rigmarole' opensips < scripts/create-opensips-tables.sql
 **Verification:**
 ```bash
 # Verify tables were created
-mysql -u opensips -p'rigmarole' opensips -e "SHOW TABLES;"
+mysql -u opensips -p'password' opensips -e "SHOW TABLES;"
 
 # Check table structures
-mysql -u opensips -p'rigmarole' opensips -e "DESCRIBE domain; DESCRIBE dispatcher; DESCRIBE endpoint_locations;"
+mysql -u opensips -p'password' opensips -e "DESCRIBE domain; DESCRIBE dispatcher; DESCRIBE endpoint_locations;"
 ```
 
 ### 6. Run Laravel Migrations
@@ -261,7 +261,7 @@ php artisan migrate
 php artisan migrate:status
 
 # Verify tables were created
-mysql -u opensips -p'rigmarole' opensips -e "SHOW TABLES LIKE 'users'; SHOW TABLES LIKE 'cache'; SHOW TABLES LIKE 'jobs';"
+mysql -u opensips -p'password' opensips -e "SHOW TABLES LIKE 'users'; SHOW TABLES LIKE 'cache'; SHOW TABLES LIKE 'jobs';"
 ```
 
 ### 7. Create Admin User
@@ -388,7 +388,7 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=opensips
 DB_USERNAME=opensips
-DB_PASSWORD=rigmarole
+DB_PASSWORD=password
 
 # OpenSIPS Management Interface (for future use)
 OPENSIPS_MI_URL=http://127.0.0.1:8888/mi
@@ -417,9 +417,9 @@ php artisan filament:list
 php artisan db:show
 
 # 4. Check if OpenSIPS tables exist
-mysql -u opensips -p'rigmarole' opensips -e "SHOW TABLES LIKE 'domain';"
-mysql -u opensips -p'rigmarole' opensips -e "SHOW TABLES LIKE 'dispatcher';"
-mysql -u opensips -p'rigmarole' opensips -e "SHOW TABLES LIKE 'endpoint_locations';"
+mysql -u opensips -p'password' opensips -e "SHOW TABLES LIKE 'domain';"
+mysql -u opensips -p'password' opensips -e "SHOW TABLES LIKE 'dispatcher';"
+mysql -u opensips -p'password' opensips -e "SHOW TABLES LIKE 'endpoint_locations';"
 
 # 5. Check Laravel migrations status
 php artisan migrate:status
