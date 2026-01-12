@@ -31,7 +31,55 @@ Before installing this admin panel, you must have:
 
 ## Installation
 
-### Option 1: Manual Installation
+### Option 1: Automated Installation (Recommended)
+
+The repository includes an automated installer script that handles the entire setup process:
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/pbx3sbc-admin.git
+cd pbx3sbc-admin
+
+# Run the installer
+./install.sh
+```
+
+The installer will:
+- Check prerequisites (PHP 8.2+, Composer, PHP extensions)
+- Install PHP dependencies
+- Configure environment file (`.env`)
+- Test database connection
+- Run database migrations
+- Create admin user (interactive)
+- Set proper file permissions
+
+**Command-line options:**
+```bash
+./install.sh [options]
+
+Options:
+  --skip-deps              Skip dependency installation
+  --skip-migrations        Skip running migrations
+  --no-admin-user          Skip admin user creation
+  --db-host HOST           Database host (default: prompts)
+  --db-user USER           Database username (default: prompts)
+  --db-password PASSWORD   Database password (default: prompts)
+  --db-name NAME           Database name (default: prompts)
+  --db-port PORT           Database port (default: 3306)
+  --opensips-mi-url URL    OpenSIPS MI URL (optional)
+```
+
+**Example with all options:**
+```bash
+./install.sh \
+  --db-host 192.168.1.100 \
+  --db-user opensips \
+  --db-password mypassword \
+  --db-name opensips \
+  --opensips-mi-url http://192.168.1.100:8888/mi
+```
+
+### Option 2: Manual Installation
 
 1. **Clone the repository:**
    ```bash
@@ -79,7 +127,7 @@ Before installing this admin panel, you must have:
 
    Access the admin panel at: `http://localhost:8000/admin`
 
-### Option 2: Using pbx3sbc Installer Script
+### Option 3: Using pbx3sbc Installer Script
 
 The `pbx3sbc` repository includes an installer script that can set up this admin panel:
 
