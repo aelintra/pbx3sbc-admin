@@ -27,6 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandName('PBX3SBC')
             ->colors([
                 'primary' => Color::Amber,
             ])

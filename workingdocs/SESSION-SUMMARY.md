@@ -41,6 +41,25 @@
 - ✅ Verified admin login credentials
 - ✅ Verified seeded data
 
+### 6. Implementation Progress (Current Session)
+- ✅ **Completed:** Create Eloquent Models (Domain, Dispatcher)
+  - Created `app/Models/Domain.php` with OpenSIPS table configuration
+  - Created `app/Models/Dispatcher.php` with OpenSIPS table configuration
+  - Configured `$table`, `$timestamps = false`, and `$fillable` properties
+- ✅ **Completed:** Create Filament Resources (Domain, Dispatcher)
+  - Created `app/Filament/Resources/DomainResource.php` with form fields and table columns
+  - Created `app/Filament/Resources/DispatcherResource.php` with form fields and table columns
+  - Configured form fields (domain, setid for Domain; setid, destination, socket, state, probe_mode, weight, priority, attrs, description for Dispatcher)
+  - Removed unused fields from UI: `attrs` and `accept_subdomain` from Domain (columns exist in DB but not exposed)
+  - Configured table columns with sorting, filtering, and search capabilities
+  - **ID columns intentionally excluded from table views** (hidden from users, but remain in database/models for internal use)
+  - Added appropriate navigation icons (globe for Domain, server for Dispatcher)
+  - Added validation: domain name format, setid (positive integers only, no spinner controls), destination (must start with "sip:", validates IP or domain format)
+- ⏳ **Not Started:** Create OpenSIPS MI Service (optional, deferred)
+
+### UI/UX Best Practices (For Future Development)
+- **ID Columns:** Do NOT include ID columns in Filament table views unless there's a specific user-facing reason. ID columns are for internal/database use only and have no human value. They should remain in the database schema and models, but be hidden from the UI.
+
 ## Key Decisions Made
 
 ### Technology Stack (Confirmed)
@@ -136,21 +155,24 @@ These tables are created and managed by the `pbx3sbc` repository:
    - Configure `$fillable` fields
    - See "Model Configuration Notes" section above for examples
 
-3. **Create OpenSIPS MI Service:** ⚡ High Priority
-   - Create `app/Services/OpenSIPSMIService.php`
-   - Implement HTTP client for OpenSIPS MI (using Laravel's HTTP client)
-   - Methods: `domainReload()`, `dispatcherReload()`, `setDispatcherState()`, etc.
-   - Handle JSON-RPC 2.0 format requests/responses
-
-4. **Create Filament Resources:** 🔄 Medium Priority
+2. **Create Filament Resources:** ⚡ High Priority
    ```bash
    php artisan make:filament-resource Domain
    php artisan make:filament-resource Dispatcher
    ```
    - Configure form fields
    - Configure table columns
-   - Add custom actions (reload OpenSIPS, etc.)
-   - Integrate with OpenSIPSMIService for reload operations
+   - Core CRUD functionality via database
+   - **Note:** MI integration (reload actions) can be added later as optional enhancement
+
+3. **Create OpenSIPS MI Service:** 🔄 Lower Priority (Optional Enhancement)
+   - Create `app/Services/OpenSIPSMIService.php`
+   - Implement HTTP client for OpenSIPS MI (using Laravel's HTTP client)
+   - Methods: `domainReload()`, `dispatcherReload()`, `setDispatcherState()`, etc.
+   - Handle JSON-RPC 2.0 format requests/responses
+   - **Design for graceful degradation:** Handle connectivity failures, make reload actions optional
+   - **Deployment Note:** Requires OpenSIPS MI HTTP interface to be accessible. Can be on same server (localhost) or remote server (configure via `OPENSIPS_MI_URL` in `.env`)
+   - **Testing Limitation:** Cannot be fully tested until OpenSIPS server is deployed and running
 
 ### Development Roadmap
 See the design documents in `pbx3sbc/workingdocs/` for detailed implementation guide:
@@ -271,7 +293,9 @@ class Dispatcher extends Model
 
 ## OpenSIPS MI Integration
 
-**Endpoint:** Configured via `OPENSIPS_MI_URL` in `.env`
+**Status:** Optional enhancement (can be implemented after core database functionality)
+
+**Endpoint:** Configured via `OPENSIPS_MI_URL` in `.env` (e.g., `http://127.0.0.1:8888/mi` or `http://opensips-server:8888/mi`)
 
 **Format:** HTTP POST with JSON-RPC 2.0
 
@@ -282,6 +306,12 @@ class Dispatcher extends Model
 - `dispatcher_list` - List dispatcher destinations
 
 **Service Class Location:** `app/Services/OpenSIPSMIService.php`
+
+**Deployment Considerations:**
+- Admin panel can run independently of OpenSIPS server (database-only mode)
+- MI integration requires network connectivity to OpenSIPS MI HTTP interface
+- Service should handle connectivity failures gracefully (optional feature)
+- Same repository, different deployment configurations (same server vs. separate servers)
 
 ## Git Status
 
