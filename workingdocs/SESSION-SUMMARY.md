@@ -192,6 +192,7 @@ See the design documents in `pbx3sbc/workingdocs/` for detailed implementation g
 1. **ADMIN-PANEL-DESIGN.md** - High-level architecture, modules, database design
 2. **LARAVEL-IMPLEMENTATION-GUIDE.md** - Detailed implementation guide with code examples
 3. **ADMIN-PANEL-PLANNING-APPROACH.md** - Task breakdown, dependencies, acceptance criteria
+4. **REMOTE-DEPLOYMENT-GUIDE.md** - Guide for deploying admin panel on separate server from OpenSIPS
 
 ## Environment Configuration
 
