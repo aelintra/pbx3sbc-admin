@@ -176,9 +176,9 @@ This admin panel connects to the **same MySQL database** that OpenSIPS uses. The
 
 ### MVP Features
 - ✅ Authentication (Filament built-in)
-- 🔄 Domain Management (Filament Resource)
-- 🔄 Dispatcher Management (Filament Resource)
-- 🔄 OpenSIPS MI Integration
+- ✅ Domain Management (Filament Resource) - Complete with validation
+- ✅ Dispatcher Management (Filament Resource) - Complete with validation
+- 🔄 OpenSIPS MI Integration (optional, deferred)
 
 ### Future Features
 - Service Management (Linux systemd services)
