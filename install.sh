@@ -3,7 +3,7 @@
 # PBX3SBC Admin Panel Installation Script
 # Installs and configures Laravel + Filament admin panel
 #
-# Usage: ./install.sh [--skip-deps] [--skip-migrations] [--db-host HOST] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user]
+# Usage: ./install.sh [--skip-deps] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user]
 #
 
 set -euo pipefail
@@ -27,7 +27,7 @@ DB_HOST=""
 DB_USER=""
 DB_PASSWORD=""
 DB_NAME=""
-DB_PORT="3306"
+DB_PORT=""  # Will prompt if not provided, defaults to 3306
 OPENSIPS_MI_URL=""
 
 # Parse arguments
@@ -237,6 +237,12 @@ setup_environment() {
         echo -n "Database name [opensips]: "
         read -r input_db_name
         DB_NAME="${input_db_name:-opensips}"
+    fi
+    
+    if [[ -z "$DB_PORT" ]]; then
+        echo -n "Database port [3306]: "
+        read -r input_db_port
+        DB_PORT="${input_db_port:-3306}"
     fi
     
     # Update .env file
