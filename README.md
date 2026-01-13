@@ -34,9 +34,11 @@ The installer will **automatically install** most prerequisites for you:
 
 ## Installation
 
-### Option 0: Docker MySQL Setup (For Testing/Development)
+### Option 0: Docker MySQL Setup (For Non-Mac Users / CI/CD)
 
-If you want to use Docker for MySQL (useful for testing or when both services run in containers):
+**For macOS developers:** Skip this option - use Herd's MySQL (see "Development Setup (Mac with Herd)" below).
+
+**For Linux/Windows developers or CI/CD:** Use Docker MySQL if you don't have MySQL installed locally:
 
 ```bash
 # Start MySQL container and initialize database
