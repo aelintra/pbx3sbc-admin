@@ -3,7 +3,7 @@
 # PBX3SBC Admin Panel Installation Script
 # Installs and configures Laravel + Filament admin panel
 #
-# Usage: ./install.sh [--skip-deps] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user]
+# Usage: ./install.sh [--skip-deps] [--skip-prereqs] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user]
 #
 
 set -euo pipefail
@@ -23,6 +23,7 @@ ENV_FILE="${INSTALL_DIR}/.env"
 SKIP_DEPS=false
 SKIP_MIGRATIONS=false
 NO_ADMIN_USER=false
+SKIP_PREREQS=false
 DB_HOST=""
 DB_USER=""
 DB_PASSWORD=""
@@ -35,6 +36,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --skip-deps)
             SKIP_DEPS=true
+            shift
+            ;;
+        --skip-prereqs)
+            SKIP_PREREQS=true
             shift
             ;;
         --skip-migrations)
@@ -117,12 +122,107 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-check_prerequisites() {
-    log_info "Checking prerequisites..."
+detect_os() {
+    if [[ -f /etc/os-release ]]; then
+        . /etc/os-release
+        OS_ID="$ID"
+        OS_VERSION_ID="$VERSION_ID"
+    elif [[ -f /etc/redhat-release ]]; then
+        OS_ID="rhel"
+        OS_VERSION_ID="unknown"
+    else
+        OS_ID="unknown"
+        OS_VERSION_ID="unknown"
+    fi
     
-    # Check PHP
+    # Determine package manager
+    if command -v apt-get &> /dev/null; then
+        PKG_MANAGER="apt"
+        PKG_INSTALL="sudo apt-get install -y"
+        PKG_UPDATE="sudo apt-get update"
+    elif command -v yum &> /dev/null; then
+        PKG_MANAGER="yum"
+        PKG_INSTALL="sudo yum install -y"
+        PKG_UPDATE="sudo yum check-update || true"
+    elif command -v dnf &> /dev/null; then
+        PKG_MANAGER="dnf"
+        PKG_INSTALL="sudo dnf install -y"
+        PKG_UPDATE="sudo dnf check-update || true"
+    else
+        PKG_MANAGER="unknown"
+        PKG_INSTALL=""
+        PKG_UPDATE=""
+    fi
+}
+
+check_root_access() {
+    if [[ $EUID -eq 0 ]]; then
+        log_warn "Running as root. This is not recommended for security reasons."
+        log_warn "The installer will use 'sudo' for privilege escalation when needed."
+    fi
+    
+    # Check if sudo is available
+    if ! command -v sudo &> /dev/null; then
+        if [[ $EUID -ne 0 ]]; then
+            log_error "sudo is not installed and you are not running as root."
+            log_error "Please install sudo or run as root."
+            exit 1
+        fi
+    fi
+}
+
+install_php() {
+    log_info "Checking PHP installation..."
+    
+    if command -v php &> /dev/null; then
+        PHP_VERSION=$(php -r 'echo PHP_VERSION;' | cut -d. -f1,2)
+        PHP_MAJOR=$(echo "$PHP_VERSION" | cut -d. -f1)
+        PHP_MINOR=$(echo "$PHP_VERSION" | cut -d. -f2)
+        
+        if [[ $PHP_MAJOR -lt 8 ]] || [[ $PHP_MAJOR -eq 8 && $PHP_MINOR -lt 2 ]]; then
+            log_warn "PHP version $PHP_VERSION is too old. PHP 8.2+ required."
+            log_info "Attempting to install PHP 8.2+..."
+        else
+            log_success "PHP $PHP_VERSION is installed"
+            return 0
+        fi
+    else
+        log_info "PHP is not installed. Installing PHP 8.2+..."
+    fi
+    
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        # Ubuntu/Debian
+        log_info "Updating package lists..."
+        $PKG_UPDATE
+        
+        # Try to install PHP 8.2 first, fall back to available version
+        if $PKG_INSTALL php8.2-cli php8.2-common 2>&1 >/dev/null; then
+            log_success "PHP 8.2 installed"
+        else
+            # PHP 8.2 not available, try 8.1
+            log_info "PHP 8.2 not available, trying PHP 8.1..."
+            if $PKG_INSTALL php8.1-cli php8.1-common 2>&1 >/dev/null; then
+                log_success "PHP 8.1 installed"
+            else
+                # Install default PHP version
+                log_info "Installing default PHP version..."
+                $PKG_INSTALL php-cli php-common
+            fi
+        fi
+    elif [[ "$PKG_MANAGER" == "yum" ]] || [[ "$PKG_MANAGER" == "dnf" ]]; then
+        # RHEL/CentOS/Fedora
+        log_info "Installing PHP..."
+        $PKG_INSTALL php php-cli php-common
+        log_success "PHP installed"
+    else
+        log_error "Unable to automatically install PHP. Unknown package manager."
+        log_error "Please install PHP 8.2+ manually and run the installer again."
+        exit 1
+    fi
+    
+    # Verify installation
     if ! command -v php &> /dev/null; then
-        log_error "PHP is not installed. Please install PHP 8.2 or higher."
+        log_error "PHP installation failed"
         exit 1
     fi
     
@@ -131,22 +231,21 @@ check_prerequisites() {
     PHP_MINOR=$(echo "$PHP_VERSION" | cut -d. -f2)
     
     if [[ $PHP_MAJOR -lt 8 ]] || [[ $PHP_MAJOR -eq 8 && $PHP_MINOR -lt 2 ]]; then
-        log_error "PHP 8.2 or higher is required. Found: $PHP_VERSION"
+        log_error "Installed PHP version $PHP_VERSION is too old. PHP 8.2+ required."
+        log_error "Please install PHP 8.2+ manually and run the installer again."
         exit 1
     fi
     
-    log_success "PHP version: $PHP_VERSION"
+    log_success "PHP $PHP_VERSION is ready"
+}
+
+install_php_extensions() {
+    log_info "Checking PHP extensions..."
     
-    # Check Composer
-    if ! command -v composer &> /dev/null; then
-        log_error "Composer is not installed. Please install Composer."
-        exit 1
-    fi
+    PHP_VERSION=$(php -r 'echo PHP_VERSION;' | cut -d. -f1,2)
+    PHP_MAJOR=$(echo "$PHP_VERSION" | cut -d. -f1)
+    PHP_MINOR=$(echo "$PHP_VERSION" | cut -d. -f2)
     
-    COMPOSER_VERSION=$(composer --version | head -n1)
-    log_success "Composer: $COMPOSER_VERSION"
-    
-    # Check required PHP extensions
     REQUIRED_EXTENSIONS=("pdo" "pdo_mysql" "mbstring" "xml" "curl" "zip" "bcmath" "intl")
     MISSING_EXTENSIONS=()
     
@@ -156,14 +255,150 @@ check_prerequisites() {
         fi
     done
     
-    if [[ ${#MISSING_EXTENSIONS[@]} -gt 0 ]]; then
-        log_error "Missing required PHP extensions: ${MISSING_EXTENSIONS[*]}"
-        log_info "Please install the missing extensions. Example for Ubuntu/Debian:"
-        log_info "  sudo apt-get install php${PHP_MAJOR}.${PHP_MINOR}-mysql php${PHP_MAJOR}.${PHP_MINOR}-xml php${PHP_MAJOR}.${PHP_MINOR}-mbstring php${PHP_MAJOR}.${PHP_MINOR}-curl php${PHP_MAJOR}.${PHP_MINOR}-zip php${PHP_MAJOR}.${PHP_MINOR}-bcmath php${PHP_MAJOR}.${PHP_MINOR}-intl"
+    if [[ ${#MISSING_EXTENSIONS[@]} -eq 0 ]]; then
+        log_success "All required PHP extensions are installed"
+        return 0
+    fi
+    
+    log_info "Installing missing PHP extensions: ${MISSING_EXTENSIONS[*]}"
+    
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        # Ubuntu/Debian - try version-specific packages first
+        PACKAGES_TO_INSTALL=()
+        NEED_MYSQL=false
+        for ext in "${MISSING_EXTENSIONS[@]}"; do
+            case $ext in
+                pdo_mysql) NEED_MYSQL=true ;;
+                pdo) ;;  # pdo is included in php-common, skip
+                mbstring) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-mbstring") ;;
+                xml) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-xml") ;;
+                curl) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-curl") ;;
+                zip) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-zip") ;;
+                bcmath) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-bcmath") ;;
+                intl) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-intl") ;;
+            esac
+        done
+        
+        # Add mysql package if pdo_mysql is missing
+        if [[ "$NEED_MYSQL" == "true" ]]; then
+            PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-mysql")
+        fi
+        
+        # Remove duplicates and install
+        UNIQUE_PACKAGES=($(printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" | sort -u))
+        $PKG_INSTALL "${UNIQUE_PACKAGES[@]}"
+        
+    elif [[ "$PKG_MANAGER" == "yum" ]] || [[ "$PKG_MANAGER" == "dnf" ]]; then
+        # RHEL/CentOS/Fedora
+        $PKG_INSTALL php-mysqlnd php-xml php-mbstring php-curl php-zip php-bcmath php-intl
+    else
+        log_error "Unable to automatically install PHP extensions. Unknown package manager."
+        log_error "Please install the missing extensions manually and run the installer again."
+        exit 1
+    fi
+    
+    # Verify extensions are now available
+    STILL_MISSING=()
+    for ext in "${MISSING_EXTENSIONS[@]}"; do
+        if ! php -m | grep -q "^${ext}$"; then
+            STILL_MISSING+=("$ext")
+        fi
+    done
+    
+    if [[ ${#STILL_MISSING[@]} -gt 0 ]]; then
+        log_error "Failed to install PHP extensions: ${STILL_MISSING[*]}"
+        log_error "Please install them manually and run the installer again."
         exit 1
     fi
     
     log_success "All required PHP extensions are installed"
+}
+
+install_composer() {
+    log_info "Checking Composer installation..."
+    
+    if command -v composer &> /dev/null; then
+        COMPOSER_VERSION=$(composer --version | head -n1)
+        log_success "Composer is installed: $COMPOSER_VERSION"
+        return 0
+    fi
+    
+    log_info "Composer is not installed. Installing Composer..."
+    
+    # Download and install Composer
+    EXPECTED_CHECKSUM="$(php -r 'copy("https://composer.github.io/installer.sig", "php://stdout");')"
+    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+    ACTUAL_CHECKSUM="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
+    
+    if [ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]; then
+        rm composer-setup.php
+        log_error "Composer installer checksum verification failed!"
+        exit 1
+    fi
+    
+    php composer-setup.php --quiet
+    RESULT=$?
+    rm composer-setup.php
+    
+    if [ $RESULT -ne 0 ]; then
+        log_error "Composer installation failed"
+        exit 1
+    fi
+    
+    # Move to a system-wide location if we have permissions
+    if [[ -w /usr/local/bin ]]; then
+        sudo mv composer.phar /usr/local/bin/composer
+        log_success "Composer installed to /usr/local/bin/composer"
+    elif [[ $EUID -eq 0 ]]; then
+        mv composer.phar /usr/local/bin/composer
+        log_success "Composer installed to /usr/local/bin/composer"
+    else
+        # Use local composer.phar
+        chmod +x composer.phar
+        log_success "Composer installed as composer.phar (run with: php composer.phar)"
+        log_warn "Consider moving composer.phar to /usr/local/bin/composer manually"
+        # Update PATH for this script
+        export PATH="$INSTALL_DIR:$PATH"
+    fi
+    
+    # Verify installation
+    if command -v composer &> /dev/null; then
+        COMPOSER_VERSION=$(composer --version | head -n1)
+        log_success "Composer installed: $COMPOSER_VERSION"
+    else
+        log_error "Composer installation verification failed"
+        exit 1
+    fi
+}
+
+check_mysql() {
+    log_info "Checking MySQL/MariaDB installation..."
+    
+    if command -v mysql &> /dev/null || command -v mariadb &> /dev/null; then
+        log_success "MySQL/MariaDB client is installed"
+    else
+        log_warn "MySQL/MariaDB client is not installed"
+        log_warn "You may be using Docker MySQL or a remote MySQL server"
+        log_warn "If you need local MySQL, install it manually:"
+        if [[ "$PKG_MANAGER" == "apt" ]]; then
+            log_warn "  sudo apt-get install mysql-server"
+        elif [[ "$PKG_MANAGER" == "yum" ]] || [[ "$PKG_MANAGER" == "dnf" ]]; then
+            log_warn "  sudo $PKG_MANAGER install mysql-server"
+        fi
+    fi
+}
+
+check_prerequisites() {
+    log_info "Checking and installing prerequisites..."
+    
+    detect_os
+    check_root_access
+    install_php
+    install_php_extensions
+    install_composer
+    check_mysql  # Optional - just warn if missing
+    
+    log_success "Prerequisites check complete"
 }
 
 install_dependencies() {
@@ -395,7 +630,21 @@ main() {
     echo -e "${NC}"
     echo
     
-    check_prerequisites
+    if [[ "$SKIP_PREREQS" != "true" ]]; then
+        check_prerequisites
+    else
+        log_info "Skipping prerequisite installation (--skip-prereqs)"
+        # Still do basic checks without installing
+        if ! command -v php &> /dev/null; then
+            log_error "PHP is not installed. Remove --skip-prereqs to auto-install."
+            exit 1
+        fi
+        if ! command -v composer &> /dev/null; then
+            log_error "Composer is not installed. Remove --skip-prereqs to auto-install."
+            exit 1
+        fi
+    fi
+    
     install_dependencies
     setup_environment
     test_database_connection

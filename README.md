@@ -15,19 +15,21 @@ This is the web-based administration interface for the PBX3sbc OpenSIPS SIP Edge
 
 ## Prerequisites
 
-Before installing this admin panel, you must have:
+The installer will **automatically install** most prerequisites for you:
 
-1. **OpenSIPS installed and configured** - See [pbx3sbc repository](https://github.com/your-org/pbx3sbc) for OpenSIPS installation
-2. **MySQL database** - The OpenSIPS database must be set up with the required tables (`domain`, `dispatcher`, etc.)
-3. **PHP 8.2+** with required extensions:
-   - php-mysql
-   - php-xml
-   - php-mbstring
-   - php-curl
-   - php-zip
-   - php-bcmath
-   - php-intl
-4. **Composer** - PHP package manager
+- ✅ **PHP 8.2+** and required extensions (auto-installed)
+- ✅ **Composer** (auto-installed)
+- ⚠️ **MySQL database** - You need a MySQL/MariaDB server (local or remote)
+  - The installer will prompt for database connection details
+  - You can use Docker MySQL (see Option 0 below)
+  - Or use an existing MySQL server
+- ⚠️ **OpenSIPS database tables** - The database should have OpenSIPS tables (`domain`, `dispatcher`, etc.)
+  - These can be created using scripts from the [pbx3sbc repository](https://github.com/your-org/pbx3sbc)
+  - Or use the Docker setup (Option 0) which creates them automatically
+
+**Supported Operating Systems:**
+- Ubuntu/Debian (apt package manager)
+- RHEL/CentOS/Fedora (yum/dnf package manager)
 
 ## Installation
 
@@ -71,20 +73,23 @@ cd pbx3sbc-admin
 ```
 
 The installer will:
-- Check prerequisites (PHP 8.2+, Composer, PHP extensions)
-- Install PHP dependencies
+- **Auto-install prerequisites** (PHP 8.2+, Composer, PHP extensions) if missing
+- Install PHP dependencies (Composer packages)
 - Configure environment file (`.env`)
 - Test database connection
 - Run database migrations
 - Create admin user (interactive)
 - Set proper file permissions
 
+**Note:** The installer is idempotent - it's safe to run multiple times. It will detect and install only missing prerequisites.
+
 **Command-line options:**
 ```bash
 ./install.sh [options]
 
 Options:
-  --skip-deps              Skip dependency installation
+  --skip-deps              Skip PHP dependency installation (Composer packages)
+  --skip-prereqs           Skip prerequisite installation (PHP, Composer, extensions)
   --skip-migrations        Skip running migrations
   --no-admin-user          Skip admin user creation
   --db-host HOST           Database host (default: prompts)
