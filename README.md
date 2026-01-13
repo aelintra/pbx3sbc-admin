@@ -23,9 +23,10 @@ The installer will **automatically install** most prerequisites for you:
   - The installer will prompt for database connection details
   - You can use Docker MySQL (see Option 0 below)
   - Or use an existing MySQL server
-- ⚠️ **OpenSIPS database tables** - The database should have OpenSIPS tables (`domain`, `dispatcher`, etc.)
-  - These can be created using scripts from the [pbx3sbc repository](https://github.com/your-org/pbx3sbc)
-  - Or use the Docker setup (Option 0) which creates them automatically
+- ⚠️ **OpenSIPS database tables** - The database should have OpenSIPS tables (`domain`, `dispatcher`, `endpoint_locations`)
+  - **IMPORTANT:** These must be created using scripts from the [pbx3sbc repository](https://github.com/your-org/pbx3sbc): `cd pbx3sbc && sudo ./scripts/init-database.sh`
+  - This admin panel repository does NOT create OpenSIPS tables - it only creates application tables (users, etc.)
+  - Docker setup (Option 0) only creates the MySQL container - you still need to initialize OpenSIPS tables separately
 
 **Supported Operating Systems:**
 - Ubuntu/Debian (apt package manager)
@@ -123,13 +124,25 @@ Options:
    composer install
    ```
 
-3. **Configure environment:**
+3. **Set up OpenSIPS database (REQUIRED):**
+   
+   **IMPORTANT:** The OpenSIPS database tables (domain, dispatcher, endpoint_locations) must be created BEFORE running the admin panel.
+   
+   Use the pbx3sbc repository to initialize the database:
+   ```bash
+   cd ../pbx3sbc  # or path to pbx3sbc repository
+   sudo ./scripts/init-database.sh
+   ```
+   
+   This creates the OpenSIPS tables that both OpenSIPS and the admin panel use.
+
+4. **Configure environment:**
    ```bash
    cp .env.example .env
    php artisan key:generate
    ```
 
-4. **Edit `.env` file:**
+5. **Edit `.env` file:**
    ```env
    DB_CONNECTION=mysql
    DB_HOST=127.0.0.1
@@ -141,17 +154,19 @@ Options:
    OPENSIPS_MI_URL=http://127.0.0.1:8888/mi
    ```
 
-5. **Run migrations:**
+6. **Run migrations (creates application tables only):**
    ```bash
    php artisan migrate
    ```
+   
+   This creates Laravel application tables (users, cache, jobs, etc.). OpenSIPS tables must already exist from step 3.
 
-6. **Create admin user:**
+7. **Create admin user:**
    ```bash
    php artisan make:filament-user
    ```
 
-7. **Start development server:**
+8. **Start development server:**
    ```bash
    php artisan serve
    ```

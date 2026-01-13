@@ -78,7 +78,7 @@ start_mysql() {
 }
 
 initialize_database() {
-    log_info "Initializing database with OpenSIPS tables..."
+    log_info "Checking database status..."
     cd "$INSTALL_DIR"
     
     # Use docker compose or docker-compose
@@ -88,20 +88,23 @@ initialize_database() {
         DOCKER_COMPOSE_CMD="docker-compose"
     fi
     
-    # Check if tables already exist
+    # Check if OpenSIPS tables already exist
     if $DOCKER_COMPOSE_CMD exec -T mysql mysql -u opensips -popensips opensips -e "SHOW TABLES LIKE 'domain';" 2>/dev/null | grep -q "domain"; then
-        log_warn "OpenSIPS tables already exist. Skipping initialization."
+        log_success "OpenSIPS tables already exist in database"
         return 0
     fi
     
-    # Run the table creation script
-    if [ -f "scripts/create-opensips-tables.sql" ]; then
-        $DOCKER_COMPOSE_CMD exec -T mysql mysql -u opensips -popensips opensips < scripts/create-opensips-tables.sql
-        log_success "OpenSIPS tables created"
-    else
-        log_error "Table creation script not found: scripts/create-opensips-tables.sql"
-        return 1
-    fi
+    log_warn "OpenSIPS tables (domain, dispatcher, endpoint_locations) not found in database"
+    echo
+    echo -e "${YELLOW}IMPORTANT:${NC} OpenSIPS database tables must be created using the pbx3sbc repository."
+    echo -e "This admin panel repository does not create OpenSIPS tables."
+    echo
+    echo -e "To create OpenSIPS tables:"
+    echo -e "  1. Use pbx3sbc repository: ${GREEN}cd pbx3sbc && sudo ./scripts/init-database.sh${NC}"
+    echo -e "  2. Or manually run the SQL from pbx3sbc/scripts/init-database.sh"
+    echo
+    echo -e "The admin panel only creates application tables (users, etc.) via Laravel migrations."
+    echo
 }
 
 display_info() {

@@ -22,14 +22,28 @@ This guide explains how to set up a MySQL Docker container that can be shared be
 docker compose up -d mysql
 ```
 
-### 2. Initialize Database
+### 2. Initialize OpenSIPS Database
 
-Wait for MySQL to be ready (about 10-15 seconds), then run:
+Wait for MySQL to be ready (about 10-15 seconds), then initialize the OpenSIPS database tables.
 
+**IMPORTANT:** OpenSIPS database tables must be created using the pbx3sbc repository, not this admin panel repository.
+
+**Option 1: Use pbx3sbc init-database.sh (Recommended)**
 ```bash
-# Create OpenSIPS tables
-docker compose exec -T mysql mysql -u opensips -popensips opensips < scripts/create-opensips-tables.sql
+# From pbx3sbc repository directory
+# Update script to use Docker MySQL connection, or use direct MySQL connection
+cd ../pbx3sbc
+sudo ./scripts/init-database.sh
+# (Update credentials to match Docker MySQL if needed)
 ```
+
+**Option 2: Manual SQL execution**
+```bash
+# Copy SQL from pbx3sbc/scripts/init-database.sh and execute manually
+# Or use the OpenSIPS schema files from /usr/share/opensips/mysql (if OpenSIPS is installed)
+```
+
+The admin panel repository does NOT create OpenSIPS tables - it only creates application tables (users, etc.) via Laravel migrations.
 
 ## Configuration
 
@@ -285,8 +299,9 @@ docker compose logs mysql
 
 ### Tables not created
 
-1. Check if script was mounted: `docker compose exec mysql ls -la /docker-entrypoint-initdb.d/`
-2. Manually run: `docker compose exec -T mysql mysql -u opensips -popensips opensips < scripts/create-opensips-tables.sql`
+1. Check if OpenSIPS tables exist: `docker compose exec mysql mysql -u opensips -popensips opensips -e "SHOW TABLES;"`
+2. Initialize OpenSIPS database using pbx3sbc repository's `scripts/init-database.sh` script
+3. See "Initialize OpenSIPS Database" section above for detailed instructions
 
 ### Connection refused from other containers
 
