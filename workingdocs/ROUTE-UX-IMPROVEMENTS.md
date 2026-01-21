@@ -359,7 +359,7 @@ Single form with:
 4. **Simpler Workflow:**
    - One operation creates complete route
    - Edit route in one place
-   - Easy to share dispatcher sets for multi-tenant scenarios
+   - Each domain has its own unique dispatcher set
 
 5. **Multi-Tenant Support:**
    - Each domain has its own dispatcher set (unique setid)
