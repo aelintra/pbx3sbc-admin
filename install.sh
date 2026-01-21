@@ -404,21 +404,40 @@ install_php_extensions() {
     fi
     
     # Verify extensions are now available
+    # Wait a moment for package manager to finish
+    sleep 1
+    
     STILL_MISSING=()
     for ext in "${MISSING_EXTENSIONS[@]}"; do
-        # Special handling for PDO
+        # Special handling for PDO - check if PDO class exists
         if [[ "$ext" == "pdo" ]]; then
             if ! php -r "exit(class_exists('PDO') ? 0 : 1);" 2>/dev/null; then
                 STILL_MISSING+=("$ext")
             fi
-        elif ! php -m | grep -q "^${ext}$"; then
-            STILL_MISSING+=("$ext")
+        # For pdo_mysql, check if PDO MySQL driver is available
+        elif [[ "$ext" == "pdo_mysql" ]]; then
+            if ! php -r "exit(in_array('mysql', PDO::getAvailableDrivers()) ? 0 : 1);" 2>/dev/null; then
+                STILL_MISSING+=("$ext")
+            fi
+        # For other extensions, check if they're loaded
+        elif ! php -r "exit(extension_loaded('${ext}') ? 0 : 1);" 2>/dev/null; then
+            # Also check php -m as fallback
+            if ! php -m 2>/dev/null | grep -q "^${ext}$"; then
+                STILL_MISSING+=("$ext")
+            fi
         fi
     done
     
     if [[ ${#STILL_MISSING[@]} -gt 0 ]]; then
-        log_error "Failed to install PHP extensions: ${STILL_MISSING[*]}"
-        log_error "Please install them manually and run the installer again."
+        log_error "Failed to verify PHP extensions: ${STILL_MISSING[*]}"
+        log_error ""
+        log_error "The packages were installed, but PHP cannot load them."
+        log_error "This may require a PHP-FPM or web server restart."
+        log_error ""
+        log_error "To verify extensions manually:"
+        log_error "  php -m | grep -E '(pdo|pdo_mysql|mbstring|xml|curl|zip|bcmath|intl)'"
+        log_error ""
+        log_error "If extensions show in 'php -m', you can continue with --skip-prereqs"
         exit 1
     fi
     
