@@ -195,18 +195,40 @@ install_php() {
         log_info "Updating package lists..."
         $PKG_UPDATE
         
-        # Try to install PHP 8.2 first, fall back to available version
-        if $PKG_INSTALL php8.2-cli php8.2-common 2>&1 >/dev/null; then
-            log_success "PHP 8.2 installed"
-        else
-            # PHP 8.2 not available, try 8.1
-            log_info "PHP 8.2 not available, trying PHP 8.1..."
-            if $PKG_INSTALL php8.1-cli php8.1-common 2>&1 >/dev/null; then
-                log_success "PHP 8.1 installed"
+        # Detect Ubuntu version to prioritize PHP version
+        # Ubuntu 24.04 ships with PHP 8.3, Ubuntu 22.04 with PHP 8.1/8.2
+        if [[ -f /etc/os-release ]]; then
+            . /etc/os-release
+            if [[ "$VERSION_ID" == "24.04" ]] || [[ "$VERSION_ID" == "24.10" ]]; then
+                PHP_PRIORITY_VERSION="8.3"
+            elif [[ "$VERSION_ID" == "22.04" ]]; then
+                PHP_PRIORITY_VERSION="8.2"
             else
-                # Install default PHP version
-                log_info "Installing default PHP version..."
-                $PKG_INSTALL php-cli php-common
+                PHP_PRIORITY_VERSION="8.2"
+            fi
+        else
+            PHP_PRIORITY_VERSION="8.2"
+        fi
+        
+        # Try to install priority version first, then fall back
+        log_info "Attempting to install PHP ${PHP_PRIORITY_VERSION}..."
+        if $PKG_INSTALL php${PHP_PRIORITY_VERSION}-cli php${PHP_PRIORITY_VERSION}-common 2>&1 >/dev/null; then
+            log_success "PHP ${PHP_PRIORITY_VERSION} installed"
+        else
+            # Try PHP 8.2
+            log_info "PHP ${PHP_PRIORITY_VERSION} not available, trying PHP 8.2..."
+            if $PKG_INSTALL php8.2-cli php8.2-common 2>&1 >/dev/null; then
+                log_success "PHP 8.2 installed"
+            else
+                # Try PHP 8.1
+                log_info "PHP 8.2 not available, trying PHP 8.1..."
+                if $PKG_INSTALL php8.1-cli php8.1-common 2>&1 >/dev/null; then
+                    log_success "PHP 8.1 installed"
+                else
+                    # Install default PHP version
+                    log_info "Installing default PHP version..."
+                    $PKG_INSTALL php-cli php-common
+                fi
             fi
         fi
     elif [[ "$PKG_MANAGER" == "yum" ]] || [[ "$PKG_MANAGER" == "dnf" ]]; then
@@ -250,7 +272,12 @@ install_php_extensions() {
     MISSING_EXTENSIONS=()
     
     for ext in "${REQUIRED_EXTENSIONS[@]}"; do
-        if ! php -m | grep -q "^${ext}$"; then
+        # Special handling for PDO - check if PDO class exists or if pdo_mysql is available
+        if [[ "$ext" == "pdo" ]]; then
+            if ! php -r "exit(class_exists('PDO') ? 0 : 1);" 2>/dev/null; then
+                MISSING_EXTENSIONS+=("$ext")
+            fi
+        elif ! php -m | grep -q "^${ext}$"; then
             MISSING_EXTENSIONS+=("$ext")
         fi
     done
@@ -264,18 +291,42 @@ install_php_extensions() {
     
     if [[ "$PKG_MANAGER" == "apt" ]]; then
         # Ubuntu/Debian - try version-specific packages first
+        log_info "Detected Ubuntu/Debian. Installing PHP extensions..."
+        
+        # Update package lists first
+        log_info "Updating package lists..."
+        $PKG_UPDATE
+        
         PACKAGES_TO_INSTALL=()
         NEED_MYSQL=false
+        
         for ext in "${MISSING_EXTENSIONS[@]}"; do
             case $ext in
-                pdo_mysql) NEED_MYSQL=true ;;
-                pdo) ;;  # pdo is included in php-common, skip
-                mbstring) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-mbstring") ;;
-                xml) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-xml") ;;
-                curl) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-curl") ;;
-                zip) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-zip") ;;
-                bcmath) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-bcmath") ;;
-                intl) PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-intl") ;;
+                pdo_mysql) 
+                    NEED_MYSQL=true 
+                    ;;
+                pdo) 
+                    # PDO is included in php-common, but we check if it's available
+                    # If pdo_mysql is needed, mysql package will include PDO
+                    ;;
+                mbstring) 
+                    PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-mbstring") 
+                    ;;
+                xml) 
+                    PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-xml") 
+                    ;;
+                curl) 
+                    PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-curl") 
+                    ;;
+                zip) 
+                    PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-zip") 
+                    ;;
+                bcmath) 
+                    PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-bcmath") 
+                    ;;
+                intl) 
+                    PACKAGES_TO_INSTALL+=("php${PHP_MAJOR}.${PHP_MINOR}-intl") 
+                    ;;
             esac
         done
         
@@ -285,22 +336,82 @@ install_php_extensions() {
         fi
         
         # Remove duplicates and install
-        UNIQUE_PACKAGES=($(printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" | sort -u))
-        $PKG_INSTALL "${UNIQUE_PACKAGES[@]}"
+        if [[ ${#PACKAGES_TO_INSTALL[@]} -gt 0 ]]; then
+            UNIQUE_PACKAGES=($(printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" | sort -u))
+            log_info "Installing PHP extension packages: ${UNIQUE_PACKAGES[*]}"
+            if ! $PKG_INSTALL "${UNIQUE_PACKAGES[@]}"; then
+                log_error "Failed to install PHP extension packages"
+                log_error ""
+                log_error "Please install manually on Ubuntu 24.04:"
+                log_error "  sudo apt-get update"
+                log_error "  sudo apt-get install -y ${UNIQUE_PACKAGES[*]}"
+                log_error ""
+                log_error "Or if the version-specific packages don't exist, try:"
+                log_error "  sudo apt-get install -y php-mysql php-xml php-mbstring php-curl php-zip php-bcmath php-intl"
+                exit 1
+            fi
+        else
+            log_info "All required extensions are available (PDO is core)"
+        fi
         
     elif [[ "$PKG_MANAGER" == "yum" ]] || [[ "$PKG_MANAGER" == "dnf" ]]; then
         # RHEL/CentOS/Fedora
-        $PKG_INSTALL php-mysqlnd php-xml php-mbstring php-curl php-zip php-bcmath php-intl
+        log_info "Installing PHP extensions via $PKG_MANAGER..."
+        if ! $PKG_INSTALL php-mysqlnd php-xml php-mbstring php-curl php-zip php-bcmath php-intl; then
+            log_error "Failed to install PHP extensions via $PKG_MANAGER"
+            log_error "Please install manually: sudo $PKG_INSTALL php-mysqlnd php-xml php-mbstring php-curl php-zip php-bcmath php-intl"
+            exit 1
+        fi
+    elif [[ "$(uname)" == "Darwin" ]]; then
+        # macOS - Check if using Homebrew
+        if command -v brew &> /dev/null; then
+            log_info "Detected macOS with Homebrew. Checking PHP installation method..."
+            PHP_BREW_PATH=$(brew --prefix php@${PHP_MAJOR}.${PHP_MINOR} 2>/dev/null || brew --prefix php 2>/dev/null || echo "")
+            
+            if [[ -n "$PHP_BREW_PATH" ]]; then
+                log_info "PHP installed via Homebrew. Attempting to install extensions..."
+                # Try to install extensions via Homebrew
+                if brew list php@${PHP_MAJOR}.${PHP_MINOR} &>/dev/null; then
+                    log_info "Installing PHP extensions via Homebrew..."
+                    brew install php@${PHP_MAJOR}.${PHP_MINOR} || log_warn "Some extensions may already be installed"
+                else
+                    log_warn "PHP ${PHP_MAJOR}.${PHP_MINOR} not found via Homebrew"
+                    log_info "If extensions are missing, install via: brew install php@${PHP_MAJOR}.${PHP_MINOR}"
+                fi
+            else
+                log_info "PHP may be installed via Laravel Herd or other method."
+                log_info "Extensions should already be available. If not, check Herd settings."
+            fi
+            
+            # On macOS with Herd, extensions are usually pre-installed
+            # Just verify they're available, don't try to install
+            log_info "Verifying extensions are available..."
+        else
+            log_warn "macOS detected but Homebrew not found."
+            log_warn "PHP extensions should be available if using Laravel Herd or system PHP."
+            log_warn "If missing, install via: brew install php@${PHP_MAJOR}.${PHP_MINOR}"
+        fi
     else
-        log_error "Unable to automatically install PHP extensions. Unknown package manager."
-        log_error "Please install the missing extensions manually and run the installer again."
+        log_error "Unable to automatically install PHP extensions. Unknown package manager: $PKG_MANAGER"
+        log_error "Detected OS: $(uname -s)"
+        log_error ""
+        log_error "Please install the missing extensions manually:"
+        log_error "  Missing: ${MISSING_EXTENSIONS[*]}"
+        log_error ""
+        log_error "For Ubuntu/Debian: sudo apt-get install php${PHP_MAJOR}.${PHP_MINOR}-mysql php${PHP_MAJOR}.${PHP_MINOR}-xml php${PHP_MAJOR}.${PHP_MINOR}-mbstring php${PHP_MAJOR}.${PHP_MINOR}-curl php${PHP_MAJOR}.${PHP_MINOR}-zip php${PHP_MAJOR}.${PHP_MINOR}-bcmath php${PHP_MAJOR}.${PHP_MINOR}-intl"
+        log_error "For RHEL/CentOS/Fedora: sudo $PKG_MANAGER install php-mysqlnd php-xml php-mbstring php-curl php-zip php-bcmath php-intl"
         exit 1
     fi
     
     # Verify extensions are now available
     STILL_MISSING=()
     for ext in "${MISSING_EXTENSIONS[@]}"; do
-        if ! php -m | grep -q "^${ext}$"; then
+        # Special handling for PDO
+        if [[ "$ext" == "pdo" ]]; then
+            if ! php -r "exit(class_exists('PDO') ? 0 : 1);" 2>/dev/null; then
+                STILL_MISSING+=("$ext")
+            fi
+        elif ! php -m | grep -q "^${ext}$"; then
             STILL_MISSING+=("$ext")
         fi
     done
@@ -448,39 +559,108 @@ setup_environment() {
     # Configure database connection
     log_info "Configuring database connection..."
     
-    # Prompt for database details if not provided via arguments
-    if [[ -z "$DB_HOST" ]]; then
-        echo -n "Database host [127.0.0.1]: "
-        read -r input_db_host
-        DB_HOST="${input_db_host:-127.0.0.1}"
+    # Check if database config already exists in .env
+    DB_CONFIG_EXISTS=false
+    if grep -q "^DB_HOST=" "$ENV_FILE" 2>/dev/null && \
+       grep -q "^DB_USERNAME=" "$ENV_FILE" 2>/dev/null && \
+       grep -q "^DB_PASSWORD=" "$ENV_FILE" 2>/dev/null && \
+       grep -q "^DB_DATABASE=" "$ENV_FILE" 2>/dev/null; then
+        DB_CONFIG_EXISTS=true
     fi
     
-    if [[ -z "$DB_USER" ]]; then
-        echo -n "Database username [opensips]: "
-        read -r input_db_user
-        DB_USER="${input_db_user:-opensips}"
-    fi
-    
-    if [[ -z "$DB_PASSWORD" ]]; then
-        echo -n "Database password: "
-        read -rs input_db_password
-        echo
-        DB_PASSWORD="$input_db_password"
-    fi
-    
-    if [[ -z "$DB_NAME" ]]; then
-        echo -n "Database name [opensips]: "
-        read -r input_db_name
-        DB_NAME="${input_db_name:-opensips}"
-    fi
-    
-    if [[ -z "$DB_PORT" ]]; then
-        echo -n "Database port [3306]: "
-        read -r input_db_port
-        DB_PORT="${input_db_port:-3306}"
-    fi
-    
-    # Update .env file
+    # Only prompt/update if config doesn't exist or if explicitly provided via arguments
+    if [[ "$DB_CONFIG_EXISTS" == "true" ]] && [[ -z "$DB_HOST" ]] && [[ -z "$DB_USER" ]] && [[ -z "$DB_PASSWORD" ]] && [[ -z "$DB_NAME" ]]; then
+        log_info "Database configuration already exists in .env file"
+        log_info "Skipping database configuration (use --db-host, --db-user, etc. to override)"
+    else
+        # Prompt for database details if not provided via arguments
+        if [[ -z "$DB_HOST" ]]; then
+            if [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
+                CURRENT_HOST=$(grep "^DB_HOST=" "$ENV_FILE" | cut -d'=' -f2)
+                echo -n "Database host [$CURRENT_HOST]: "
+            else
+                echo -n "Database host [127.0.0.1]: "
+            fi
+            read -r input_db_host
+            if [[ -n "$input_db_host" ]]; then
+                DB_HOST="$input_db_host"
+            elif [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
+                DB_HOST="$CURRENT_HOST"
+            else
+                DB_HOST="127.0.0.1"
+            fi
+        fi
+        
+        if [[ -z "$DB_USER" ]]; then
+            if [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
+                CURRENT_USER=$(grep "^DB_USERNAME=" "$ENV_FILE" | cut -d'=' -f2)
+                echo -n "Database username [$CURRENT_USER]: "
+            else
+                echo -n "Database username [opensips]: "
+            fi
+            read -r input_db_user
+            if [[ -n "$input_db_user" ]]; then
+                DB_USER="$input_db_user"
+            elif [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
+                DB_USER="$CURRENT_USER"
+            else
+                DB_USER="opensips"
+            fi
+        fi
+        
+        if [[ -z "$DB_PASSWORD" ]]; then
+            if [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
+                CURRENT_PASSWORD=$(grep "^DB_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2)
+                echo -n "Database password [keep existing]: "
+            else
+                echo -n "Database password: "
+            fi
+            read -rs input_db_password
+            echo
+            if [[ -n "$input_db_password" ]]; then
+                DB_PASSWORD="$input_db_password"
+            elif [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
+                DB_PASSWORD="$CURRENT_PASSWORD"
+            else
+                DB_PASSWORD=""
+            fi
+        fi
+        
+        if [[ -z "$DB_NAME" ]]; then
+            if [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
+                CURRENT_NAME=$(grep "^DB_DATABASE=" "$ENV_FILE" | cut -d'=' -f2)
+                echo -n "Database name [$CURRENT_NAME]: "
+            else
+                echo -n "Database name [opensips]: "
+            fi
+            read -r input_db_name
+            if [[ -n "$input_db_name" ]]; then
+                DB_NAME="$input_db_name"
+            elif [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
+                DB_NAME="$CURRENT_NAME"
+            else
+                DB_NAME="opensips"
+            fi
+        fi
+        
+        if [[ -z "$DB_PORT" ]]; then
+            if [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
+                CURRENT_PORT=$(grep "^DB_PORT=" "$ENV_FILE" | cut -d'=' -f2)
+                echo -n "Database port [$CURRENT_PORT]: "
+            else
+                echo -n "Database port [3306]: "
+            fi
+            read -r input_db_port
+            if [[ -n "$input_db_port" ]]; then
+                DB_PORT="$input_db_port"
+            elif [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
+                DB_PORT="$CURRENT_PORT"
+            else
+                DB_PORT="3306"
+            fi
+        fi
+        
+        # Update .env file
     if [[ "$(uname)" == "Darwin" ]]; then
         # macOS
         sed -i '' "s/^DB_CONNECTION=.*/DB_CONNECTION=mysql/" "$ENV_FILE"
@@ -560,9 +740,20 @@ create_admin_user() {
         return
     fi
     
-    log_info "Creating admin user..."
-    log_warn "You will be prompted to enter admin user details"
+    log_info "Checking for existing admin users..."
     cd "$INSTALL_DIR"
+    
+    # Check if any users exist
+    USER_COUNT=$(php artisan tinker --execute="echo App\Models\User::count();" 2>/dev/null || echo "0")
+    
+    if [[ "$USER_COUNT" -gt 0 ]]; then
+        log_info "Found $USER_COUNT existing user(s). Skipping admin user creation."
+        log_info "To create additional users, run: php artisan make:filament-user"
+        return
+    fi
+    
+    log_info "No users found. Creating admin user..."
+    log_warn "You will be prompted to enter admin user details"
     
     php artisan make:filament-user
     
