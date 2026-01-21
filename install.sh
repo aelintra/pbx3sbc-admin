@@ -271,13 +271,22 @@ install_php_extensions() {
     REQUIRED_EXTENSIONS=("pdo" "pdo_mysql" "mbstring" "xml" "curl" "zip" "bcmath" "intl")
     MISSING_EXTENSIONS=()
     
+    # Get list of loaded extensions
+    LOADED_EXTENSIONS=$(php -m 2>/dev/null)
+    
     for ext in "${REQUIRED_EXTENSIONS[@]}"; do
-        # Special handling for PDO - check if PDO class exists or if pdo_mysql is available
+        # Special handling for PDO - check if PDO class exists
         if [[ "$ext" == "pdo" ]]; then
             if ! php -r "exit(class_exists('PDO') ? 0 : 1);" 2>/dev/null; then
                 MISSING_EXTENSIONS+=("$ext")
             fi
-        elif ! php -m | grep -q "^${ext}$"; then
+        # Special handling for pdo_mysql - check if PDO MySQL driver is available
+        elif [[ "$ext" == "pdo_mysql" ]]; then
+            if ! php -r "exit(class_exists('PDO') && in_array('mysql', PDO::getAvailableDrivers()) ? 0 : 1);" 2>/dev/null; then
+                MISSING_EXTENSIONS+=("$ext")
+            fi
+        # For other extensions, check if they're in php -m output
+        elif ! echo "$LOADED_EXTENSIONS" | grep -q "^${ext}$"; then
             MISSING_EXTENSIONS+=("$ext")
         fi
     done
@@ -407,6 +416,9 @@ install_php_extensions() {
     # Wait a moment for package manager to finish
     sleep 1
     
+    # Get fresh list of loaded extensions
+    LOADED_EXTENSIONS=$(php -m 2>/dev/null)
+    
     STILL_MISSING=()
     for ext in "${MISSING_EXTENSIONS[@]}"; do
         # Special handling for PDO - check if PDO class exists
@@ -416,15 +428,12 @@ install_php_extensions() {
             fi
         # For pdo_mysql, check if PDO MySQL driver is available
         elif [[ "$ext" == "pdo_mysql" ]]; then
-            if ! php -r "exit(in_array('mysql', PDO::getAvailableDrivers()) ? 0 : 1);" 2>/dev/null; then
+            if ! php -r "exit(class_exists('PDO') && in_array('mysql', PDO::getAvailableDrivers()) ? 0 : 1);" 2>/dev/null; then
                 STILL_MISSING+=("$ext")
             fi
-        # For other extensions, check if they're loaded
-        elif ! php -r "exit(extension_loaded('${ext}') ? 0 : 1);" 2>/dev/null; then
-            # Also check php -m as fallback
-            if ! php -m 2>/dev/null | grep -q "^${ext}$"; then
-                STILL_MISSING+=("$ext")
-            fi
+        # For other extensions, check if they're in php -m output
+        elif ! echo "$LOADED_EXTENSIONS" | grep -q "^${ext}$"; then
+            STILL_MISSING+=("$ext")
         fi
     done
     
