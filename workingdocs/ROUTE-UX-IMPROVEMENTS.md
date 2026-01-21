@@ -45,21 +45,18 @@ Call Routes
 │   └── Destinations:
 │       └── sip:192.168.1.200:5060 (Active, Weight: 1)
 │
-└── Multi-Tenant Route: Shared PBX Backend
-    ├── Dispatcher Set: Set 10 (Shared - 3 domains)
-    ├── Destinations:
-    │   ├── sip:192.168.1.50:5060 (Active, Weight: 1) [Primary]
-    │   └── sip:192.168.1.51:5060 (Active, Weight: 1) [Backup]
-    └── Domains using this set:
-        ├── tenant1.com
-        ├── tenant2.com
-        └── tenant3.com
+└── Route: tenant3.com → PBX Multi-Tenant (192.168.1.50:5060)
+    ├── Domain: tenant3.com
+    ├── Dispatcher Set: Set 10 (Private - 1 domain)
+    └── Destinations:
+        ├── sip:192.168.1.50:5060 (Active, Weight: 1) [Primary]
+        └── sip:192.168.1.51:5060 (Active, Weight: 1) [Backup]
 ```
 
-**Multi-Tenant Example:**
-- Multiple domains (tenant1.com, tenant2.com, tenant3.com) all route to the same Asterisk PBX
-- All share the same dispatcher set (same setid)
-- Common use case: Multi-tenant Asterisk instances where different domains route to same backend
+**Note on Multi-Tenant Scenarios:**
+- Each domain has its own unique setid and dispatcher set
+- Multiple domains can route to the same PBX backend destinations, but each domain maintains its own dispatcher set
+- To route multiple domains to same backend, create separate routes with same destination URIs but different setids
 
 **Implementation:**
 - New `CallRouteResource` (or `SipRouteResource`)
@@ -205,27 +202,9 @@ Navigation:
 │ Domain Name: [example.com________________]                  │
 │                                                              │
 │ Dispatcher Set:                                             │
-│ ○ Create new dispatcher set                                 │
-│ ○ Use existing dispatcher set: [Select Set ▼]               │
-│   Options shown:                                             │
-│   • Set 5 - Used by: example.com (1 domain, 2 destinations) │
-│   • Set 10 - Used by: tenant1.com, tenant2.com, tenant3.com│
-│     (3 domains, 2 destinations) [Multi-tenant]               │
-│                                                              │
-│   When existing set selected:                                │
-│   ┌──────────────────────────────────────────────────────┐ │
-│   │ Shared Dispatcher Set: Set 10                        │ │
-│   │ Currently used by:                                   │ │
-│   │ • tenant1.com                                        │ │
-│   │ • tenant2.com                                        │ │
-│   │ • tenant3.com                                        │ │
-│   │                                                      │ │
-│   │ Existing destinations:                              │ │
-│   │ • sip:192.168.1.50:5060 (Active, Weight: 1)         │ │
-│   │ • sip:192.168.1.51:5060 (Active, Weight: 1)          │ │
-│   │                                                      │ │
-│   │ [Add more destinations to this set]                │ │
-│   └──────────────────────────────────────────────────────┘ │
+│ • Set ID will be auto-generated (unique per domain)         │
+│ • Each domain gets its own dispatcher set                   │
+│ • Set ID: [Auto-generated, hidden from user]               │
 │                                                              │
 │ Destinations:                                                │
 │ ┌────────────────────────────────────────────────────────┐ │
@@ -261,11 +240,11 @@ Navigation:
 3. **For sharing dispatcher set:** Allow user to select existing setid (but show as "dispatcher set", not "setid")
 4. **Never expose setid to users:** Hide from forms, show only in advanced view if needed
 
-**UI for SetID Selection:**
-- Show as "Dispatcher Set" not "Set ID"
-- Display: "Set 5 - Used by: domain1.com, domain2.com (2 destinations)"
-- Allow creating new set or selecting existing
-- When selecting existing, show which domains already use it
+**UI for SetID Management:**
+- Show as "Dispatcher Set" not "Set ID" (hidden from users)
+- Auto-generate unique setid for each new domain
+- Display: "Set 5" (for reference only, in advanced view)
+- Each domain gets its own unique setid (cannot share)
 
 **Implementation:**
 ```php
@@ -387,9 +366,9 @@ Single form with:
    - Easy to share dispatcher sets for multi-tenant scenarios
 
 5. **Multi-Tenant Support:**
-   - Clear visualization of shared dispatcher sets
-   - Easy to add new domains to existing backend
-   - Shows which domains share the same PBX backend
+   - Each domain has its own dispatcher set (unique setid)
+   - Multiple domains can route to same PBX destinations by creating separate routes with same destination URIs
+   - Clear visualization of each domain's routing configuration
 
 ## Migration Path
 
@@ -405,26 +384,27 @@ Single form with:
 
 1. **Domain → SetID:**
    - One domain = one setid (1:1)
-   - Domain.setid is NOT unique (multiple domains can share same setid)
-   - This allows multiple domains to route to the same dispatcher set
+   - **SetID MUST be unique within the domain table** (one setid per domain)
+   - Each domain has its own unique setid
 
 2. **SetID → Dispatcher:**
    - One setid = many dispatcher rows (1:many)
    - Multiple dispatcher rows with same setid = multiple destinations
    - Enables failover and load balancing
+   - **SetID is NOT unique in the dispatcher table** (multiple dispatcher rows share same setid)
 
 3. **Overall Model:**
-   - Domain (1) → SetID (many domains can share) → Dispatcher Set (many destinations)
+   - Domain (1) → SetID (unique, 1:1) → Dispatcher Set (many destinations)
    - Classic ER would be: Domain → Link Table → Destination
    - OpenSIPS uses setid as the link (denormalized)
 
 **Implications for UX:**
-- One domain → one dispatcher set (via setid)
+- One domain → one dispatcher set (via setid) - strict 1:1 relationship
 - One dispatcher set → multiple destinations (for failover/load balancing)
-- Multiple domains can share the same dispatcher set (same setid)
-- When creating a route, we can either:
-  - Create new setid (new dispatcher set)
-  - Reuse existing setid (share dispatcher set with other domains)
+- **Each domain has its own unique dispatcher set** (cannot share setid between domains)
+- When creating a route:
+  - Always create new setid (auto-generated, unique per domain)
+  - Cannot reuse existing setid (each domain gets its own)
 
 ## Questions to Consider
 
@@ -432,8 +412,8 @@ Single form with:
    - ✅ **Answer:** No - one domain has one setid (1:1 relationship)
 
 2. **Can one dispatcher set serve multiple domains?**
-   - ✅ **Answer:** Yes - setid is not unique, multiple domains can share same setid
-   - **UX Implication:** When creating route, offer option to "Use existing dispatcher set" or "Create new dispatcher set"
+   - ✅ **Answer:** No - setid is unique in domain table, each domain has its own unique setid
+   - **UX Implication:** Always create new setid when creating new domain (auto-generated)
 
 3. **Do users need to see setid at all?**
    - ✅ **Answer:** No - it exists ONLY to link domain to destinations
@@ -443,7 +423,7 @@ Single form with:
 4. **What happens when editing?**
    - Can user change domain name? (probably not - create new route)
    - Can user add/remove destinations? (yes)
-   - Can user change setid? (no - auto-managed, but could allow "reassign to different dispatcher set")
+   - Can user change setid? (no - auto-managed, unique per domain)
 
 ## Next Steps
 
