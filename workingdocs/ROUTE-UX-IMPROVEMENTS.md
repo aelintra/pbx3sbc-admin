@@ -220,11 +220,7 @@ Navigation:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Note:** When "Use existing dispatcher set" is selected:
-- Show which domains already use that set
-- Show existing destinations in that set
-- Allow adding more destinations to the set
-- Domain will be added to the shared set
+**Note:** Each domain gets its own unique dispatcher set (setid). Setid is auto-generated and hidden from users.
 
 **Key Features:**
 - **Auto-manage setid:** Generate automatically, never show to user
@@ -235,10 +231,10 @@ Navigation:
 ### Phase 2: Auto-Generate SetID
 
 **Strategy:**
-1. **For new routes (new dispatcher set):** Auto-increment highest setid + 1
-2. **For existing domains:** Use existing setid
-3. **For sharing dispatcher set:** Allow user to select existing setid (but show as "dispatcher set", not "setid")
-4. **Never expose setid to users:** Hide from forms, show only in advanced view if needed
+1. **For new routes:** Auto-increment highest setid + 1 (always create new unique setid)
+2. **For existing domains:** Use existing setid (cannot change)
+3. **Never expose setid to users:** Hide from forms, show only in advanced view if needed
+4. **Each domain gets unique setid:** Cannot share setid between domains (setid is unique in domain table)
 
 **UI for SetID Management:**
 - Show as "Dispatcher Set" not "Set ID" (hidden from users)
@@ -354,7 +350,7 @@ Single form with:
 2. **Matches Mental Model:**
    - "Route calls from domain X to PBX Y"
    - Not "Create domain with setid, then create dispatcher with same setid"
-   - Supports multi-tenant: "Route multiple domains to same backend"
+   - Each domain has its own route configuration
 
 3. **Reduces Errors:**
    - Can't mismatch setid values
