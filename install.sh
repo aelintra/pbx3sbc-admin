@@ -3,7 +3,7 @@
 # PBX3SBC Admin Panel Installation Script
 # Installs and configures Laravel + Filament admin panel
 #
-# Usage: ./install.sh [--skip-deps] [--skip-prereqs] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user]
+# Usage: ./install.sh [--skip-deps] [--skip-prereqs] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user] [--admin-name NAME] [--admin-email EMAIL] [--admin-password PASSWORD] [--opensips-mi-url URL]
 #
 
 set -euo pipefail
@@ -30,6 +30,9 @@ DB_PASSWORD=""
 DB_NAME=""
 DB_PORT=""  # Will prompt if not provided, defaults to 3306
 OPENSIPS_MI_URL=""
+ADMIN_NAME=""
+ADMIN_EMAIL=""
+ADMIN_PASSWORD=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -98,8 +101,33 @@ while [[ $# -gt 0 ]]; do
             OPENSIPS_MI_URL="$2"
             shift 2
             ;;
+        --admin-name)
+            if [[ -z "${2:-}" ]]; then
+                echo -e "${RED}Error: --admin-name requires a name${NC}"
+                exit 1
+            fi
+            ADMIN_NAME="$2"
+            shift 2
+            ;;
+        --admin-email)
+            if [[ -z "${2:-}" ]]; then
+                echo -e "${RED}Error: --admin-email requires an email${NC}"
+                exit 1
+            fi
+            ADMIN_EMAIL="$2"
+            shift 2
+            ;;
+        --admin-password)
+            if [[ -z "${2:-}" ]]; then
+                echo -e "${RED}Error: --admin-password requires a password${NC}"
+                exit 1
+            fi
+            ADMIN_PASSWORD="$2"
+            shift 2
+            ;;
         *)
             echo -e "${RED}Unknown option: $1${NC}"
+            echo "Usage: $0 [--skip-deps] [--skip-prereqs] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user] [--opensips-mi-url URL] [--admin-name NAME] [--admin-email EMAIL] [--admin-password PASSWORD]"
             exit 1
             ;;
     esac
@@ -1128,11 +1156,51 @@ create_admin_user() {
     fi
     
     log_info "No users found. Creating admin user..."
-    log_warn "You will be prompted to enter admin user details"
     
-    php artisan make:filament-user
+    # Use provided values or defaults
+    if [[ -z "$ADMIN_NAME" ]]; then
+        ADMIN_NAME="Admin"
+    fi
     
-    log_success "Admin user creation completed"
+    if [[ -z "$ADMIN_EMAIL" ]]; then
+        ADMIN_EMAIL="admin@example.com"
+        log_warn "Using default admin email: $ADMIN_EMAIL"
+        log_warn "You can change it later or use --admin-email to set it now"
+    fi
+    
+    if [[ -z "$ADMIN_PASSWORD" ]]; then
+        # Generate a random password
+        ADMIN_PASSWORD=$(openssl rand -base64 12 | tr -d "=+/" | cut -c1-12)
+        log_info "Generated random password for admin user"
+    fi
+    
+    # Create user non-interactively using tinker
+    log_info "Creating admin user: $ADMIN_NAME ($ADMIN_EMAIL)"
+    
+    php artisan tinker --execute="
+        \$user = new App\Models\User();
+        \$user->name = '$ADMIN_NAME';
+        \$user->email = '$ADMIN_EMAIL';
+        \$user->password = Hash::make('$ADMIN_PASSWORD');
+        \$user->save();
+        echo 'User created successfully';
+    " 2>&1
+    
+    if [[ $? -eq 0 ]]; then
+        log_success "Admin user created successfully"
+        echo
+        echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${YELLOW}Admin Credentials:${NC}"
+        echo -e "  Email:    ${GREEN}$ADMIN_EMAIL${NC}"
+        echo -e "  Password: ${GREEN}$ADMIN_PASSWORD${NC}"
+        echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo
+        log_warn "Please save these credentials securely!"
+        log_warn "You can change the password after logging in"
+    else
+        log_error "Failed to create admin user"
+        log_info "You can create one manually: php artisan make:filament-user"
+    fi
 }
 
 set_permissions() {
