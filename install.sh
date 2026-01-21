@@ -800,6 +800,25 @@ test_database_connection() {
         log_error "Database connection failed!"
         echo "$DB_TEST_OUTPUT"
         log_error ""
+        
+        # Check for specific error messages
+        if echo "$DB_TEST_OUTPUT" | grep -q "Host.*is not allowed to connect"; then
+            log_error "ERROR: Database user is not allowed to connect from this host."
+            log_error ""
+            log_error "This is a MySQL/MariaDB access control issue."
+            log_error "The database user needs permission to connect from your host."
+            log_error ""
+            log_info "To fix this, run on the database server:"
+            log_info "  mysql -u root -p"
+            log_info "  GRANT ALL PRIVILEGES ON opensips.* TO 'opensips'@'%' IDENTIFIED BY 'password';"
+            log_info "  FLUSH PRIVILEGES;"
+            log_info ""
+            log_info "Or if connecting from specific host:"
+            log_info "  GRANT ALL PRIVILEGES ON opensips.* TO 'opensips'@'127.0.0.1' IDENTIFIED BY 'password';"
+            log_info "  GRANT ALL PRIVILEGES ON opensips.* TO 'opensips'@'localhost' IDENTIFIED BY 'password';"
+        fi
+        
+        log_error ""
         log_error "Please check your database configuration in .env file:"
         log_error "  DB_CONNECTION=mysql"
         log_error "  DB_HOST=..."
@@ -812,6 +831,7 @@ test_database_connection() {
         log_info "  - Database server is not running"
         log_info "  - Database credentials are incorrect"
         log_info "  - Database user doesn't have access to the database"
+        log_info "  - Database user not allowed to connect from this host (see above)"
         log_info "  - Network connectivity issues (if remote database)"
         log_info "  - Firewall blocking connection"
         log_info ""
@@ -874,8 +894,14 @@ set_permissions() {
     log_info "Setting directory permissions..."
     cd "$INSTALL_DIR"
     
+    # Create storage directories if they don't exist
+    mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+    
     # Set storage and bootstrap/cache permissions
     chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+    
+    # Ensure storage/logs is writable
+    chmod -R 775 storage/logs 2>/dev/null || true
     
     # Try to set ownership to web server user if running as root
     if [[ $EUID -eq 0 ]]; then
@@ -888,10 +914,19 @@ set_permissions() {
             WEB_USER=""
         fi
         
+        # Get the user who will run PHP (usually the user who owns the directory or www-data)
         if [[ -n "$WEB_USER" ]] && id "$WEB_USER" &> /dev/null; then
             chown -R "$WEB_USER:$WEB_USER" storage bootstrap/cache 2>/dev/null || true
             log_success "Set ownership to $WEB_USER"
+        else
+            # If no web server user, make storage world-writable (less secure but works)
+            chmod -R 777 storage bootstrap/cache 2>/dev/null || true
+            log_warn "No web server user detected. Set storage permissions to 777 (less secure)"
         fi
+    else
+        # Not running as root - make sure current user owns storage
+        CURRENT_USER=$(whoami)
+        chown -R "$CURRENT_USER:$CURRENT_USER" storage bootstrap/cache 2>/dev/null || true
     fi
     
     log_success "Permissions configured"
@@ -948,10 +983,10 @@ main() {
     
     install_dependencies
     setup_environment
+    set_permissions  # Set permissions before testing DB connection (needed for logging)
     test_database_connection
     run_migrations
     create_admin_user
-    set_permissions
     display_summary
 }
 
