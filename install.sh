@@ -527,6 +527,229 @@ check_mysql() {
     fi
 }
 
+install_php_fpm() {
+    log_info "Checking PHP-FPM installation..."
+    
+    PHP_VERSION=$(php -r 'echo PHP_VERSION;' | cut -d. -f1,2)
+    PHP_MAJOR=$(echo "$PHP_VERSION" | cut -d. -f1)
+    PHP_MINOR=$(echo "$PHP_VERSION" | cut -d. -f2)
+    
+    # Check if PHP-FPM is already installed
+    if command -v php-fpm &> /dev/null || systemctl is-active --quiet php*-fpm 2>/dev/null || service php*-fpm status &>/dev/null; then
+        log_success "PHP-FPM is installed"
+        return 0
+    fi
+    
+    log_info "PHP-FPM is not installed. Installing PHP-FPM..."
+    
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        # Try to install matching PHP version
+        if $PKG_INSTALL php${PHP_MAJOR}.${PHP_MINOR}-fpm 2>&1 >/dev/null; then
+            log_success "PHP-FPM ${PHP_MAJOR}.${PHP_MINOR} installed"
+        else
+            # Fallback to php-fpm
+            $PKG_INSTALL php-fpm
+            log_success "PHP-FPM installed"
+        fi
+    elif [[ "$PKG_MANAGER" == "yum" ]] || [[ "$PKG_MANAGER" == "dnf" ]]; then
+        $PKG_INSTALL php-fpm
+        log_success "PHP-FPM installed"
+    else
+        log_error "Unable to automatically install PHP-FPM. Unknown package manager."
+        log_error "Please install PHP-FPM manually and run the installer again."
+        exit 1
+    fi
+    
+    # Enable and start PHP-FPM service
+    if systemctl is-enabled php*-fpm &>/dev/null || systemctl is-enabled php-fpm &>/dev/null; then
+        log_info "PHP-FPM service is already enabled"
+    else
+        # Try to enable the service (version-specific or generic)
+        if systemctl enable php${PHP_MAJOR}.${PHP_MINOR}-fpm &>/dev/null || \
+           systemctl enable php-fpm &>/dev/null || \
+           systemctl enable php${PHP_MAJOR}-fpm &>/dev/null; then
+            log_success "PHP-FPM service enabled"
+        else
+            log_warn "Could not enable PHP-FPM service automatically"
+        fi
+    fi
+    
+    # Start PHP-FPM if not running
+    if systemctl is-active --quiet php*-fpm 2>/dev/null || systemctl is-active --quiet php-fpm 2>/dev/null; then
+        log_info "PHP-FPM service is running"
+    else
+        if systemctl start php${PHP_MAJOR}.${PHP_MINOR}-fpm &>/dev/null || \
+           systemctl start php-fpm &>/dev/null || \
+           systemctl start php${PHP_MAJOR}-fpm &>/dev/null; then
+            log_success "PHP-FPM service started"
+        else
+            log_warn "Could not start PHP-FPM service automatically"
+            log_warn "You may need to start it manually: systemctl start php-fpm"
+        fi
+    fi
+}
+
+install_nginx() {
+    log_info "Checking nginx installation..."
+    
+    if command -v nginx &> /dev/null; then
+        NGINX_VERSION=$(nginx -v 2>&1 | grep -oP '\d+\.\d+\.\d+' | head -n1 || echo "unknown")
+        log_success "nginx is installed (version: $NGINX_VERSION)"
+        return 0
+    fi
+    
+    log_info "nginx is not installed. Installing nginx..."
+    
+    if [[ "$PKG_MANAGER" == "apt" ]]; then
+        $PKG_UPDATE
+        $PKG_INSTALL nginx
+    elif [[ "$PKG_MANAGER" == "yum" ]] || [[ "$PKG_MANAGER" == "dnf" ]]; then
+        $PKG_INSTALL nginx
+    else
+        log_error "Unable to automatically install nginx. Unknown package manager."
+        log_error "Please install nginx manually and run the installer again."
+        exit 1
+    fi
+    
+    # Verify installation
+    if ! command -v nginx &> /dev/null; then
+        log_error "nginx installation failed"
+        exit 1
+    fi
+    
+    log_success "nginx installed"
+}
+
+configure_nginx() {
+    # Check if nginx is installed
+    if ! command -v nginx &> /dev/null; then
+        log_warn "nginx is not installed. Skipping nginx configuration."
+        log_warn "Install nginx manually or run without --skip-prereqs to auto-install."
+        return 0
+    fi
+    
+    log_info "Configuring nginx for Laravel..."
+    
+    # Detect PHP-FPM socket path
+    PHP_VERSION=$(php -r 'echo PHP_VERSION;' | cut -d. -f1,2)
+    PHP_MAJOR=$(echo "$PHP_VERSION" | cut -d. -f1)
+    PHP_MINOR=$(echo "$PHP_VERSION" | cut -d. -f2)
+    
+    # Try to find PHP-FPM socket
+    PHP_FPM_SOCKET=""
+    if [[ -S "/var/run/php/php${PHP_MAJOR}.${PHP_MINOR}-fpm.sock" ]]; then
+        PHP_FPM_SOCKET="/var/run/php/php${PHP_MAJOR}.${PHP_MINOR}-fpm.sock"
+    elif [[ -S "/var/run/php/php${PHP_MAJOR}-fpm.sock" ]]; then
+        PHP_FPM_SOCKET="/var/run/php/php${PHP_MAJOR}-fpm.sock"
+    elif [[ -S "/var/run/php-fpm/php-fpm.sock" ]]; then
+        PHP_FPM_SOCKET="/var/run/php-fpm/php-fpm.sock"
+    elif [[ -S "/run/php/php${PHP_MAJOR}.${PHP_MINOR}-fpm.sock" ]]; then
+        PHP_FPM_SOCKET="/run/php/php${PHP_MAJOR}.${PHP_MINOR}-fpm.sock"
+    else
+        # Default to common Ubuntu/Debian path
+        PHP_FPM_SOCKET="/var/run/php/php${PHP_MAJOR}.${PHP_MINOR}-fpm.sock"
+        log_warn "Could not detect PHP-FPM socket, using default: $PHP_FPM_SOCKET"
+        log_warn "You may need to update the nginx config if this is incorrect"
+    fi
+    
+    # Determine server name (try to get hostname or use localhost)
+    SERVER_NAME=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
+    
+    # Create nginx config file
+    NGINX_CONFIG="/etc/nginx/sites-available/pbx3sbc-admin"
+    NGINX_ENABLED="/etc/nginx/sites-enabled/pbx3sbc-admin"
+    
+    # Check if config already exists
+    if [[ -f "$NGINX_CONFIG" ]]; then
+        log_info "nginx config already exists at $NGINX_CONFIG"
+        log_info "Skipping nginx configuration (use --reconfigure-nginx to override)"
+        # Still enable the site if not already enabled
+        if [[ ! -L "$NGINX_ENABLED" ]]; then
+            sudo ln -sf "$NGINX_CONFIG" "$NGINX_ENABLED"
+            log_success "Enabled nginx site"
+        fi
+        return 0
+    fi
+    
+    log_info "Creating nginx configuration..."
+    
+    # Create nginx config
+    sudo tee "$NGINX_CONFIG" > /dev/null <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${SERVER_NAME};
+    root ${INSTALL_DIR}/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:${PHP_FPM_SOCKET};
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+EOF
+    
+    log_success "nginx configuration created at $NGINX_CONFIG"
+    
+    # Enable the site
+    if [[ -d "/etc/nginx/sites-enabled" ]]; then
+        sudo ln -sf "$NGINX_CONFIG" "$NGINX_ENABLED"
+        log_success "Enabled nginx site"
+        
+        # Remove default site if it exists
+        if [[ -L "/etc/nginx/sites-enabled/default" ]]; then
+            sudo rm -f /etc/nginx/sites-enabled/default
+            log_info "Removed default nginx site"
+        fi
+    fi
+    
+    # Test nginx configuration
+    if sudo nginx -t &>/dev/null; then
+        log_success "nginx configuration test passed"
+    else
+        log_error "nginx configuration test failed"
+        log_error "Please check the configuration manually: sudo nginx -t"
+        exit 1
+    fi
+    
+    # Reload nginx
+    if systemctl is-active --quiet nginx; then
+        if sudo systemctl reload nginx &>/dev/null; then
+            log_success "nginx reloaded"
+        else
+            log_warn "Could not reload nginx. You may need to restart it manually: sudo systemctl restart nginx"
+        fi
+    else
+        # Start nginx if not running
+        if sudo systemctl enable nginx &>/dev/null && sudo systemctl start nginx &>/dev/null; then
+            log_success "nginx started and enabled"
+        else
+            log_warn "Could not start nginx. You may need to start it manually: sudo systemctl start nginx"
+        fi
+    fi
+}
+
 check_prerequisites() {
     log_info "Checking and installing prerequisites..."
     
@@ -534,6 +757,8 @@ check_prerequisites() {
     check_root_access
     install_php
     install_php_extensions
+    install_php_fpm
+    install_nginx
     install_composer
     check_mysql  # Optional - just warn if missing
     
@@ -962,12 +1187,19 @@ display_summary() {
     echo -e "Admin panel is ready to use!"
     echo
     echo -e "${YELLOW}Next steps:${NC}"
-    echo -e "  1. Start the development server:"
-    echo -e "     ${GREEN}php artisan serve${NC}"
-    echo -e "     Then visit: ${GREEN}http://localhost:8000/admin${NC}"
+    echo -e "  1. Access the admin panel:"
+    if command -v nginx &> /dev/null && systemctl is-active --quiet nginx 2>/dev/null; then
+        SERVER_NAME=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
+        echo -e "     ${GREEN}http://${SERVER_NAME}/admin${NC}"
+        echo -e "     (nginx is configured and running)"
+    else
+        echo -e "     Start the development server:"
+        echo -e "     ${GREEN}php artisan serve${NC}"
+        echo -e "     Then visit: ${GREEN}http://localhost:8000/admin${NC}"
+    fi
     echo
-    echo -e "  2. Or configure your web server (nginx/apache) to serve"
-    echo -e "     the application from the ${GREEN}public${NC} directory"
+    echo -e "  2. If nginx is installed, the application is configured at:"
+    echo -e "     ${GREEN}/etc/nginx/sites-available/pbx3sbc-admin${NC}"
     echo
     echo -e "  3. Log in with the admin credentials you just created"
     echo
@@ -1004,6 +1236,7 @@ main() {
     install_dependencies
     setup_environment
     set_permissions  # Set permissions before testing DB connection (needed for logging)
+    configure_nginx  # Configure nginx for Laravel
     test_database_connection
     run_migrations
     create_admin_user
