@@ -34,15 +34,32 @@
 Call Routes
 ├── Route: example.com → PBX Asterisk-1 (192.168.1.100:5060)
 │   ├── Domain: example.com
+│   ├── Dispatcher Set: Set 5 (Private - 1 domain)
 │   └── Destinations:
 │       ├── sip:192.168.1.100:5060 (Active, Weight: 1)
 │       └── sip:192.168.1.101:5060 (Active, Weight: 1) [Backup]
 │
 ├── Route: another.com → PBX Asterisk-2 (192.168.1.200:5060)
 │   ├── Domain: another.com
+│   ├── Dispatcher Set: Set 6 (Private - 1 domain)
 │   └── Destinations:
 │       └── sip:192.168.1.200:5060 (Active, Weight: 1)
+│
+└── Multi-Tenant Route: Shared PBX Backend
+    ├── Dispatcher Set: Set 10 (Shared - 3 domains)
+    ├── Destinations:
+    │   ├── sip:192.168.1.50:5060 (Active, Weight: 1) [Primary]
+    │   └── sip:192.168.1.51:5060 (Active, Weight: 1) [Backup]
+    └── Domains using this set:
+        ├── tenant1.com
+        ├── tenant2.com
+        └── tenant3.com
 ```
+
+**Multi-Tenant Example:**
+- Multiple domains (tenant1.com, tenant2.com, tenant3.com) all route to the same Asterisk PBX
+- All share the same dispatcher set (same setid)
+- Common use case: Multi-tenant Asterisk instances where different domains route to same backend
 
 **Implementation:**
 - New `CallRouteResource` (or `SipRouteResource`)
@@ -190,7 +207,25 @@ Navigation:
 │ Dispatcher Set:                                             │
 │ ○ Create new dispatcher set                                 │
 │ ○ Use existing dispatcher set: [Select Set ▼]               │
-│   (Shows: "Set 5 - Used by: domain1.com, domain2.com")      │
+│   Options shown:                                             │
+│   • Set 5 - Used by: example.com (1 domain, 2 destinations) │
+│   • Set 10 - Used by: tenant1.com, tenant2.com, tenant3.com│
+│     (3 domains, 2 destinations) [Multi-tenant]               │
+│                                                              │
+│   When existing set selected:                                │
+│   ┌──────────────────────────────────────────────────────┐ │
+│   │ Shared Dispatcher Set: Set 10                        │ │
+│   │ Currently used by:                                   │ │
+│   │ • tenant1.com                                        │ │
+│   │ • tenant2.com                                        │ │
+│   │ • tenant3.com                                        │ │
+│   │                                                      │ │
+│   │ Existing destinations:                              │ │
+│   │ • sip:192.168.1.50:5060 (Active, Weight: 1)         │ │
+│   │ • sip:192.168.1.51:5060 (Active, Weight: 1)          │ │
+│   │                                                      │ │
+│   │ [Add more destinations to this set]                │ │
+│   └──────────────────────────────────────────────────────┘ │
 │                                                              │
 │ Destinations:                                                │
 │ ┌────────────────────────────────────────────────────────┐ │
@@ -221,9 +256,16 @@ Navigation:
 ### Phase 2: Auto-Generate SetID
 
 **Strategy:**
-1. **For new domains:** Auto-increment highest setid + 1
+1. **For new routes (new dispatcher set):** Auto-increment highest setid + 1
 2. **For existing domains:** Use existing setid
-3. **Never expose setid to users:** Hide from forms, show only in advanced view if needed
+3. **For sharing dispatcher set:** Allow user to select existing setid (but show as "dispatcher set", not "setid")
+4. **Never expose setid to users:** Hide from forms, show only in advanced view if needed
+
+**UI for SetID Selection:**
+- Show as "Dispatcher Set" not "Set ID"
+- Display: "Set 5 - Used by: domain1.com, domain2.com (2 destinations)"
+- Allow creating new set or selecting existing
+- When selecting existing, show which domains already use it
 
 **Implementation:**
 ```php
@@ -333,6 +375,7 @@ Single form with:
 2. **Matches Mental Model:**
    - "Route calls from domain X to PBX Y"
    - Not "Create domain with setid, then create dispatcher with same setid"
+   - Supports multi-tenant: "Route multiple domains to same backend"
 
 3. **Reduces Errors:**
    - Can't mismatch setid values
@@ -341,6 +384,12 @@ Single form with:
 4. **Simpler Workflow:**
    - One operation creates complete route
    - Edit route in one place
+   - Easy to share dispatcher sets for multi-tenant scenarios
+
+5. **Multi-Tenant Support:**
+   - Clear visualization of shared dispatcher sets
+   - Easy to add new domains to existing backend
+   - Shows which domains share the same PBX backend
 
 ## Migration Path
 
