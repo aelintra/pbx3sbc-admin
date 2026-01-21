@@ -562,8 +562,19 @@ install_php_fpm() {
     PHP_MAJOR=$(echo "$PHP_VERSION" | cut -d. -f1)
     PHP_MINOR=$(echo "$PHP_VERSION" | cut -d. -f2)
     
-    # Check if PHP-FPM is already installed
-    if command -v php-fpm &> /dev/null || systemctl is-active --quiet php*-fpm 2>/dev/null || service php*-fpm status &>/dev/null; then
+    # Check if PHP-FPM service actually exists (more reliable check)
+    PHP_FPM_INSTALLED=false
+    if systemctl list-unit-files | grep -q "php${PHP_MAJOR}.${PHP_MINOR}-fpm.service" 2>/dev/null; then
+        PHP_FPM_INSTALLED=true
+    elif systemctl list-unit-files | grep -q "php${PHP_MAJOR}-fpm.service" 2>/dev/null; then
+        PHP_FPM_INSTALLED=true
+    elif systemctl list-unit-files | grep -q "php-fpm.service" 2>/dev/null; then
+        PHP_FPM_INSTALLED=true
+    elif [ -f "/etc/init.d/php${PHP_MAJOR}.${PHP_MINOR}-fpm" ] || [ -f "/etc/init.d/php-fpm" ]; then
+        PHP_FPM_INSTALLED=true
+    fi
+    
+    if [[ "$PHP_FPM_INSTALLED" == "true" ]]; then
         log_success "PHP-FPM is installed"
         return 0
     fi
@@ -1054,6 +1065,11 @@ test_database_connection() {
         echo "$DB_TEST_OUTPUT"
         log_error ""
         
+        # Get DB_HOST from .env to provide specific instructions
+        DB_HOST_FROM_ENV=$(grep "^DB_HOST=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "")
+        DB_USER_FROM_ENV=$(grep "^DB_USERNAME=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "opensips")
+        DB_NAME_FROM_ENV=$(grep "^DB_DATABASE=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "opensips")
+        
         # Check for specific error messages
         if echo "$DB_TEST_OUTPUT" | grep -q "Host.*is not allowed to connect"; then
             log_error "ERROR: Database user is not allowed to connect from this host."
@@ -1061,11 +1077,6 @@ test_database_connection() {
             log_error "This is a MySQL/MariaDB access control issue."
             log_error "The database user needs permission to connect from your host."
             log_error ""
-            
-            # Get DB_HOST from .env to provide specific instructions
-            DB_HOST_FROM_ENV=$(grep "^DB_HOST=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "")
-            DB_USER_FROM_ENV=$(grep "^DB_USERNAME=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "opensips")
-            DB_NAME_FROM_ENV=$(grep "^DB_DATABASE=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "opensips")
             
             if [[ "$DB_HOST_FROM_ENV" == "127.0.0.1" ]] || [[ "$DB_HOST_FROM_ENV" == "localhost" ]] || [[ -z "$DB_HOST_FROM_ENV" ]]; then
                 log_info "You are connecting to localhost. Run these commands on THIS server:"
@@ -1088,6 +1099,49 @@ test_database_connection() {
                 log_info ""
                 log_info "Or if you want to restrict to specific host:"
                 log_info "  GRANT ALL PRIVILEGES ON ${DB_NAME_FROM_ENV}.* TO '${DB_USER_FROM_ENV}'@'$(hostname -I | awk '{print $1}')' IDENTIFIED BY 'your_password';"
+            fi
+        elif echo "$DB_TEST_OUTPUT" | grep -q "Operation timed out\|Connection timed out\|Can't connect to MySQL server"; then
+            log_error "ERROR: Connection timeout - Cannot reach MySQL server."
+            log_error ""
+            log_error "This usually means:"
+            log_error "  1. MySQL server is not running"
+            log_error "  2. MySQL is not listening on the network interface"
+            log_error "  3. Firewall is blocking port 3306"
+            log_error "  4. MySQL bind-address is set to 127.0.0.1 only"
+            log_error ""
+            
+            # Check if connecting to own IP address
+            SERVER_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "")
+            if [[ "$DB_HOST_FROM_ENV" == "$SERVER_IP" ]] || [[ -n "$SERVER_IP" && "$DB_HOST_FROM_ENV" =~ $SERVER_IP ]]; then
+                log_info "You are trying to connect to this server's IP address ($DB_HOST_FROM_ENV)."
+                log_info "Try using '127.0.0.1' or 'localhost' instead:"
+                log_info ""
+                log_info "  Edit .env file:"
+                log_info "    DB_HOST=127.0.0.1"
+                log_info ""
+                log_info "Or configure MySQL to listen on all interfaces:"
+                log_info "  1. Edit MySQL config: sudo nano /etc/mysql/mysql.conf.d/mysqld.cnf"
+                log_info "  2. Change: bind-address = 0.0.0.0  (or comment it out)"
+                log_info "  3. Restart MySQL: sudo systemctl restart mysql"
+            else
+                log_info "Troubleshooting steps:"
+                log_info ""
+                log_info "1. Check if MySQL is running:"
+                log_info "   sudo systemctl status mysql"
+                log_info ""
+                log_info "2. Check if MySQL is listening on port 3306:"
+                log_info "   sudo netstat -tlnp | grep 3306"
+                log_info "   or: sudo ss -tlnp | grep 3306"
+                log_info ""
+                log_info "3. Check firewall rules:"
+                log_info "   sudo ufw status"
+                log_info "   sudo iptables -L -n | grep 3306"
+                log_info ""
+                log_info "4. Test connection from command line:"
+                log_info "   mysql -h $DB_HOST_FROM_ENV -P 3306 -u $DB_USER_FROM_ENV -p"
+                log_info ""
+                log_info "5. If connecting to localhost, try using 127.0.0.1 instead of IP:"
+                log_info "   Edit .env: DB_HOST=127.0.0.1"
             fi
         fi
         
@@ -1210,26 +1264,47 @@ set_permissions() {
     # Create storage directories if they don't exist
     mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
     
+    # Try to detect web server user
+    WEB_USER="www-data"  # Default for nginx/apache
+    if command -v nginx &> /dev/null; then
+        WEB_USER="www-data"
+    elif command -v apache2 &> /dev/null || command -v httpd &> /dev/null; then
+        WEB_USER="www-data"  # or apache/httpd depending on distro
+    fi
+    
+    # Ensure parent directories are accessible (critical for nginx to access files)
+    INSTALL_PARENT=$(dirname "$INSTALL_DIR")
+    if [[ -n "$INSTALL_PARENT" ]] && [[ "$INSTALL_PARENT" != "/" ]]; then
+        # Make parent directory readable/executable (needed for nginx to traverse)
+        if [[ $EUID -eq 0 ]]; then
+            chmod 755 "$INSTALL_PARENT" 2>/dev/null || true
+            # Also ensure the install directory itself is accessible
+            chmod 755 "$INSTALL_DIR" 2>/dev/null || true
+        else
+            # If not root, try with sudo
+            sudo chmod 755 "$INSTALL_PARENT" 2>/dev/null || true
+            sudo chmod 755 "$INSTALL_DIR" 2>/dev/null || true
+        fi
+    fi
+    
     # Set storage and bootstrap/cache permissions
     chmod -R 775 storage bootstrap/cache 2>/dev/null || true
     
     # Ensure storage/logs is writable
     chmod -R 775 storage/logs 2>/dev/null || true
     
+    # Set public directory permissions (nginx needs to read these)
+    chmod -R 755 public 2>/dev/null || true
+    
     # Try to set ownership to web server user if running as root
     if [[ $EUID -eq 0 ]]; then
-        # Try to detect web server user
-        if command -v nginx &> /dev/null; then
-            WEB_USER="www-data"
-        elif command -v apache2 &> /dev/null || command -v httpd &> /dev/null; then
-            WEB_USER="www-data"  # or apache/httpd depending on distro
-        else
-            WEB_USER=""
-        fi
-        
-        # Get the user who will run PHP (usually the user who owns the directory or www-data)
         if [[ -n "$WEB_USER" ]] && id "$WEB_USER" &> /dev/null; then
+            # Set ownership for storage and cache (needs write access)
             chown -R "$WEB_USER:$WEB_USER" storage bootstrap/cache 2>/dev/null || true
+            
+            # Set ownership for public directory (nginx needs read access)
+            chown -R "$WEB_USER:$WEB_USER" public 2>/dev/null || true
+            
             log_success "Set ownership to $WEB_USER"
         else
             # If no web server user, make storage world-writable (less secure but works)
@@ -1237,9 +1312,28 @@ set_permissions() {
             log_warn "No web server user detected. Set storage permissions to 777 (less secure)"
         fi
     else
-        # Not running as root - make sure current user owns storage
-        CURRENT_USER=$(whoami)
-        chown -R "$CURRENT_USER:$CURRENT_USER" storage bootstrap/cache 2>/dev/null || true
+        # Not running as root - try with sudo for web server user
+        if [[ -n "$WEB_USER" ]] && id "$WEB_USER" &> /dev/null 2>/dev/null; then
+            sudo chown -R "$WEB_USER:$WEB_USER" storage bootstrap/cache 2>/dev/null || true
+            sudo chown -R "$WEB_USER:$WEB_USER" public 2>/dev/null || true
+            log_success "Set ownership to $WEB_USER"
+        else
+            # Make sure current user owns storage
+            CURRENT_USER=$(whoami)
+            chown -R "$CURRENT_USER:$CURRENT_USER" storage bootstrap/cache 2>/dev/null || true
+            # Make public readable by all
+            chmod -R 755 public 2>/dev/null || true
+        fi
+    fi
+    
+    # Verify www-data can access the public directory (critical check)
+    if [[ -n "$WEB_USER" ]] && id "$WEB_USER" &> /dev/null 2>/dev/null; then
+        if sudo -u "$WEB_USER" test -r "$INSTALL_DIR/public/index.php" 2>/dev/null; then
+            log_success "Verified $WEB_USER can access public directory"
+        else
+            log_warn "Warning: $WEB_USER may not be able to access public directory"
+            log_warn "You may need to check parent directory permissions manually"
+        fi
     fi
     
     log_success "Permissions configured"
