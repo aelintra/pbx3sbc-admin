@@ -364,7 +364,8 @@ DB_PASSWORD=opensips
 OPENSIPS_MI_URL=http://127.0.0.1:8888/mi  # Optional
 ```
 
-## Next Steps / TODO
+- [ ] Multi-instance management
+- [ ] S3/Minio Object Storage Management (for long-term statistics, logs, and traces)
 
 - [ ] Add roles and permissions system
 - [ ] Implement OpenSIPS MI integration (optional)
@@ -372,3 +373,16 @@ OPENSIPS_MI_URL=http://127.0.0.1:8888/mi  # Optional
 - [ ] Export CDR functionality
 - [ ] Real-time call monitoring updates
 - [ ] Multi-instance management
+
+**Phase 2 (Priority):**
+- [ ] Service Management (Linux systemd services)
+- [ ] Remote API Integration
+- [ ] Add roles and permissions system
+- [ ] Implement OpenSIPS MI integration (optional)
+- [ ] Add more statistics widgets
+- [ ] Export CDR functionality
+- [ ] Real-time call monitoring updates
+
+**Phase 3 (Future):**
+- [ ] Multi-instance management
+- [ ] S3/Minio Object Storage Management (for long-term statistics, logs, and traces)
