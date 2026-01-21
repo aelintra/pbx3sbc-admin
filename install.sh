@@ -811,9 +811,18 @@ run_migrations() {
     log_info "Running database migrations..."
     cd "$INSTALL_DIR"
     
-    php artisan migrate --force
-    
-    log_success "Migrations completed"
+    # Run migrations and capture output
+    if php artisan migrate --force 2>&1; then
+        log_success "Migrations completed"
+    else
+        MIGRATE_EXIT=$?
+        log_error "Migrations failed with exit code: $MIGRATE_EXIT"
+        log_error "Please check the error messages above and fix any issues"
+        log_info "You can try running migrations manually:"
+        log_info "  cd $INSTALL_DIR"
+        log_info "  php artisan migrate --force"
+        exit 1
+    fi
 }
 
 create_admin_user() {
