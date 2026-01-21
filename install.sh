@@ -558,18 +558,33 @@ install_dependencies() {
         # Try to install from lock file first
         log_info "Attempting to install from composer.lock..."
         
-        # Run composer install and capture both stdout and stderr
-        COMPOSER_OUTPUT=$(timeout 300 composer install --no-interaction --no-plugins --prefer-dist --optimize-autoloader 2>&1)
-        INSTALL_EXIT=$?
+        # Check if timeout command is available
+        if command -v timeout &> /dev/null; then
+            TIMEOUT_CMD="timeout 300"
+        else
+            TIMEOUT_CMD=""
+            log_warn "timeout command not available, composer may hang if there are issues"
+        fi
         
-        # Always show the output
-        echo "$COMPOSER_OUTPUT"
+        # Run composer install and capture both stdout and stderr
+        # Use a temporary file to capture output since command substitution might hang
+        TEMP_OUTPUT=$(mktemp)
+        if $TIMEOUT_CMD composer install --no-interaction --no-plugins --prefer-dist --optimize-autoloader > "$TEMP_OUTPUT" 2>&1; then
+            INSTALL_EXIT=0
+        else
+            INSTALL_EXIT=$?
+        fi
+        
+        # Show the output
+        cat "$TEMP_OUTPUT"
+        COMPOSER_OUTPUT=$(cat "$TEMP_OUTPUT")
+        rm -f "$TEMP_OUTPUT"
         
         # Check if lock file is incompatible
         if echo "$COMPOSER_OUTPUT" | grep -q "Your lock file does not contain a compatible set of packages"; then
             log_warn "Lock file is incompatible with current PHP version."
             log_info "Updating dependencies to match current PHP version..."
-            if ! timeout 600 composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
+            if ! $TIMEOUT_CMD composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
                 log_error "Failed to install dependencies"
                 log_error "Please check your PHP version and composer.json requirements"
                 exit 1
@@ -579,7 +594,7 @@ install_dependencies() {
             exit 1
         elif [[ $INSTALL_EXIT -ne 0 ]]; then
             log_warn "Composer install failed (exit code: $INSTALL_EXIT). Trying update..."
-            if ! timeout 600 composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
+            if ! $TIMEOUT_CMD composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
                 log_error "Failed to install dependencies"
                 log_error "Please check your PHP version and composer.json requirements"
                 exit 1
