@@ -808,14 +808,34 @@ test_database_connection() {
             log_error "This is a MySQL/MariaDB access control issue."
             log_error "The database user needs permission to connect from your host."
             log_error ""
-            log_info "To fix this, run on the database server:"
-            log_info "  mysql -u root -p"
-            log_info "  GRANT ALL PRIVILEGES ON opensips.* TO 'opensips'@'%' IDENTIFIED BY 'password';"
-            log_info "  FLUSH PRIVILEGES;"
-            log_info ""
-            log_info "Or if connecting from specific host:"
-            log_info "  GRANT ALL PRIVILEGES ON opensips.* TO 'opensips'@'127.0.0.1' IDENTIFIED BY 'password';"
-            log_info "  GRANT ALL PRIVILEGES ON opensips.* TO 'opensips'@'localhost' IDENTIFIED BY 'password';"
+            
+            # Get DB_HOST from .env to provide specific instructions
+            DB_HOST_FROM_ENV=$(grep "^DB_HOST=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "")
+            DB_USER_FROM_ENV=$(grep "^DB_USERNAME=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "opensips")
+            DB_NAME_FROM_ENV=$(grep "^DB_DATABASE=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "opensips")
+            
+            if [[ "$DB_HOST_FROM_ENV" == "127.0.0.1" ]] || [[ "$DB_HOST_FROM_ENV" == "localhost" ]] || [[ -z "$DB_HOST_FROM_ENV" ]]; then
+                log_info "You are connecting to localhost. Run these commands on THIS server:"
+                log_info ""
+                log_info "  mysql -u root -p"
+                log_info "  GRANT ALL PRIVILEGES ON ${DB_NAME_FROM_ENV}.* TO '${DB_USER_FROM_ENV}'@'localhost' IDENTIFIED BY 'your_password';"
+                log_info "  GRANT ALL PRIVILEGES ON ${DB_NAME_FROM_ENV}.* TO '${DB_USER_FROM_ENV}'@'127.0.0.1' IDENTIFIED BY 'your_password';"
+                log_info "  FLUSH PRIVILEGES;"
+                log_info "  exit;"
+                log_info ""
+                log_info "Replace 'your_password' with the actual password from your .env file."
+            else
+                log_info "You are connecting to remote host: $DB_HOST_FROM_ENV"
+                log_info "Run these commands on the database server ($DB_HOST_FROM_ENV):"
+                log_info ""
+                log_info "  mysql -u root -p"
+                log_info "  GRANT ALL PRIVILEGES ON ${DB_NAME_FROM_ENV}.* TO '${DB_USER_FROM_ENV}'@'%' IDENTIFIED BY 'your_password';"
+                log_info "  FLUSH PRIVILEGES;"
+                log_info "  exit;"
+                log_info ""
+                log_info "Or if you want to restrict to specific host:"
+                log_info "  GRANT ALL PRIVILEGES ON ${DB_NAME_FROM_ENV}.* TO '${DB_USER_FROM_ENV}'@'$(hostname -I | awk '{print $1}')' IDENTIFIED BY 'your_password';"
+            fi
         fi
         
         log_error ""
