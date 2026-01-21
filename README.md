@@ -230,10 +230,10 @@ This admin panel connects to the **same MySQL database** that OpenSIPS uses. The
 
 ### Future Features
 - Service Management (Linux systemd services)
-- S3/Minio Object Storage Management
 - Remote API Integration
 - Multi-Instance Management
 - Statistics and Monitoring
+- S3/Minio Object Storage Management (for long-term statistics, logs, and traces)
 
 ## Project Structure
 

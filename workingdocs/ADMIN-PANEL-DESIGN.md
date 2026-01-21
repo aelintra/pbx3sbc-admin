@@ -30,9 +30,9 @@ This document outlines the design for a modern replacement of the OpenSIPS Contr
 │  │  Filament Admin Panel (Livewire + Alpine.js)           │ │
 │  │  - Domain Management (Filament Resource)               │ │
 │  │  - Dispatcher Management (Filament Resource)           │ │
-│  │  - S3/Minio Object Management (Filament Resource)      │ │
 │  │  - Service Management (Filament Resource)              │ │
 │  │  - Remote API Integration (Filament Resource)          │ │
+│  │  - S3/Minio Object Management (Future - Filament Resource)│ │
 │  │  - Authentication/Authorization (Filament)             │ │
 │  └────────────────────────────────────────────────────────┘ │
 │                                                              │
@@ -579,7 +579,6 @@ Admin Panel Server (Laravel + Filament)
 - [ ] Testing and documentation
 
 ### Phase 2: Enhancement (Weeks 5-8)
-- [ ] S3/Minio object management (Filament Resource)
 - [ ] Linux service management (Filament Resource)
 - [ ] Remote API integration (Filament Resource/Service)
 - [ ] Advanced table features (search, filters, pagination - Filament built-in)
@@ -588,12 +587,13 @@ Admin Panel Server (Laravel + Filament)
 - [ ] Performance optimization
 
 ### Phase 3: Future Features
-- [ ] CDR/Accounting module
+- [ ] CDR/Accounting module (already implemented - CDR viewing)
 - [ ] Trunking management
 - [ ] DDI management
 - [ ] Multi-instance support
 - [ ] Advanced analytics
 - [ ] Alerting/notifications
+- [ ] S3/Minio object storage management (for long-term statistics, logs, and traces)
 
 ## Migration Strategy
 
