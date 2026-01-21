@@ -521,10 +521,32 @@ install_dependencies() {
     log_info "Installing PHP dependencies..."
     cd "$INSTALL_DIR"
     
+    # Set COMPOSER_ALLOW_SUPERUSER to avoid warnings when running as root
+    export COMPOSER_ALLOW_SUPERUSER=1
+    
     if [[ -f "composer.lock" ]]; then
-        composer install --no-interaction --prefer-dist --optimize-autoloader
+        # Try to install from lock file first
+        log_info "Attempting to install from composer.lock..."
+        INSTALL_OUTPUT=$(composer install --no-interaction --prefer-dist --optimize-autoloader 2>&1)
+        INSTALL_EXIT=$?
+        
+        if [[ $INSTALL_EXIT -ne 0 ]] || echo "$INSTALL_OUTPUT" | grep -q "Your lock file does not contain a compatible set of packages"; then
+            log_warn "Lock file is incompatible with current PHP version or installation failed."
+            log_info "Updating dependencies to match current PHP version..."
+            if ! composer update --no-interaction --prefer-dist --optimize-autoloader; then
+                log_error "Failed to install dependencies"
+                log_error "Please check your PHP version and composer.json requirements"
+                exit 1
+            fi
+        else
+            echo "$INSTALL_OUTPUT"
+        fi
     else
-        composer update --no-interaction --prefer-dist --optimize-autoloader
+        log_info "No composer.lock found. Installing dependencies..."
+        if ! composer update --no-interaction --prefer-dist --optimize-autoloader; then
+            log_error "Failed to install dependencies"
+            exit 1
+        fi
     fi
     
     log_success "Dependencies installed"
