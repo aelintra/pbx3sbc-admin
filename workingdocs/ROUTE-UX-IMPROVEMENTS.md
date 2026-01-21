@@ -187,6 +187,11 @@ Navigation:
 ├─────────────────────────────────────────────────────────────┤
 │ Domain Name: [example.com________________]                  │
 │                                                              │
+│ Dispatcher Set:                                             │
+│ ○ Create new dispatcher set                                 │
+│ ○ Use existing dispatcher set: [Select Set ▼]               │
+│   (Shows: "Set 5 - Used by: domain1.com, domain2.com")      │
+│                                                              │
 │ Destinations:                                                │
 │ ┌────────────────────────────────────────────────────────┐ │
 │ │ Destination 1:                                          │ │
@@ -200,6 +205,12 @@ Navigation:
 │ [Cancel] [Create Route]                                     │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**Note:** When "Use existing dispatcher set" is selected:
+- Show which domains already use that set
+- Show existing destinations in that set
+- Allow adding more destinations to the set
+- Domain will be added to the shared set
 
 **Key Features:**
 - **Auto-manage setid:** Generate automatically, never show to user
@@ -339,24 +350,51 @@ Single form with:
 4. **Optionally hide** Domain/Dispatcher from navigation (keep for advanced users)
 5. **Eventually deprecate** separate resources if CallRoute works well
 
+## Data Model Clarification
+
+**Confirmed Relationships:**
+
+1. **Domain → SetID:**
+   - One domain = one setid (1:1)
+   - Domain.setid is NOT unique (multiple domains can share same setid)
+   - This allows multiple domains to route to the same dispatcher set
+
+2. **SetID → Dispatcher:**
+   - One setid = many dispatcher rows (1:many)
+   - Multiple dispatcher rows with same setid = multiple destinations
+   - Enables failover and load balancing
+
+3. **Overall Model:**
+   - Domain (1) → SetID (many domains can share) → Dispatcher Set (many destinations)
+   - Classic ER would be: Domain → Link Table → Destination
+   - OpenSIPS uses setid as the link (denormalized)
+
+**Implications for UX:**
+- One domain → one dispatcher set (via setid)
+- One dispatcher set → multiple destinations (for failover/load balancing)
+- Multiple domains can share the same dispatcher set (same setid)
+- When creating a route, we can either:
+  - Create new setid (new dispatcher set)
+  - Reuse existing setid (share dispatcher set with other domains)
+
 ## Questions to Consider
 
 1. **Can one domain have multiple dispatcher sets?**
-   - If yes, need to handle multiple routes per domain
-   - If no, one-to-one relationship simplifies things
+   - ✅ **Answer:** No - one domain has one setid (1:1 relationship)
 
 2. **Can one dispatcher set serve multiple domains?**
-   - If yes, need to show which domains use which set
-   - If no, simplifies the model
+   - ✅ **Answer:** Yes - setid is not unique, multiple domains can share same setid
+   - **UX Implication:** When creating route, offer option to "Use existing dispatcher set" or "Create new dispatcher set"
 
 3. **Do users need to see setid at all?**
-   - Recommendation: Hide it completely
-   - Or show only in "Advanced" view for debugging
+   - ✅ **Answer:** No - it exists ONLY to link domain to destinations
+   - **Recommendation:** Hide it completely from users
+   - Show only in "Advanced" view for debugging if needed
 
 4. **What happens when editing?**
    - Can user change domain name? (probably not - create new route)
    - Can user add/remove destinations? (yes)
-   - Can user change setid? (no - auto-managed)
+   - Can user change setid? (no - auto-managed, but could allow "reassign to different dispatcher set")
 
 ## Next Steps
 
