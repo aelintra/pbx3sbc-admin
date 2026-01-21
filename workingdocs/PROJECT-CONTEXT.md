@@ -287,6 +287,7 @@ Both repositories work with the **same MySQL database** (`opensips`), but have d
 - **Planned:** Optional MI integration for real-time operations
 - **Current:** Database-only access
 - **Config:** `OPENSIPS_MI_URL` in `.env` (optional)
+- **Important:** OpenSIPS MI module configuration (enabling module, HTTP endpoint setup) is done in `pbx3sbc` repository. This repo only contains the client service class (`OpenSIPSMIService`) to call the MI endpoint.
 
 ## Testing Checklist
 
