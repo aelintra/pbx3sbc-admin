@@ -234,12 +234,23 @@ git push
 
 ### OpenSIPS MI Configuration
 
-**Location:** Admin panel `.env` file
-```env
-OPENSIPS_MI_URL=http://127.0.0.1:8888/mi
-```
+**Separation of Concerns:**
 
-This is admin-panel-specific configuration (not needed by pbx3sbc repo).
+**pbx3sbc Repository (OpenSIPS Server):**
+- Configures OpenSIPS MI module in `opensips.cfg`
+- Sets up HTTP endpoint (port 8888, `/mi` path)
+- Configures MI authentication/security
+- This is OpenSIPS infrastructure configuration
+
+**pbx3sbc-admin Repository (Admin Panel):**
+- Contains `OpenSIPSMIService` class (HTTP client to call MI)
+- Configuration in `.env` file:
+  ```env
+  OPENSIPS_MI_URL=http://192.168.1.58:8888/mi
+  ```
+- This is admin panel application code (client-side)
+
+**Key Point:** The MI module itself is configured in pbx3sbc repo. The admin panel only needs to know the MI endpoint URL to make HTTP calls to it.
 
 ## Version Compatibility
 

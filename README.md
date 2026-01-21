@@ -262,13 +262,16 @@ pbx3sbc-admin/
 
 ## OpenSIPS MI Integration
 
-The admin panel communicates with OpenSIPS via the Management Interface (MI) over HTTP/JSON. Configuration is in `.env`:
+The admin panel communicates with OpenSIPS via the Management Interface (MI) over HTTP/JSON.
 
+**Important:** The OpenSIPS MI module configuration (enabling the module, setting up the HTTP endpoint, authentication) is done in the `pbx3sbc` repository as part of OpenSIPS configuration. This repository only contains the client service class to call the MI endpoint.
+
+**Admin Panel Configuration** (in `.env`):
 ```env
-OPENSIPS_MI_URL=http://127.0.0.1:8888/mi
+OPENSIPS_MI_URL=http://192.168.1.58:8888/mi
 ```
 
-The `OpenSIPSMIService` class handles all MI communication.
+The `OpenSIPSMIService` class in this repository handles all MI communication (making HTTP calls to the MI endpoint configured in pbx3sbc).
 
 ## Development Workflow
 
