@@ -789,15 +789,34 @@ test_database_connection() {
     log_info "Testing database connection..."
     cd "$INSTALL_DIR"
     
-    if php artisan db:show &> /dev/null; then
+    # Test connection and capture output
+    DB_TEST_OUTPUT=$(php artisan db:show 2>&1)
+    DB_TEST_EXIT=$?
+    
+    if [[ $DB_TEST_EXIT -eq 0 ]]; then
         log_success "Database connection successful"
+        echo "$DB_TEST_OUTPUT"
     else
-        log_error "Database connection failed. Please check your database configuration."
-        log_info "Verify:"
-        log_info "  - Database server is running"
-        log_info "  - Database credentials are correct"
-        log_info "  - Database user has access to the database"
-        log_info "  - Network connectivity to database server (if remote)"
+        log_error "Database connection failed!"
+        echo "$DB_TEST_OUTPUT"
+        log_error ""
+        log_error "Please check your database configuration in .env file:"
+        log_error "  DB_CONNECTION=mysql"
+        log_error "  DB_HOST=..."
+        log_error "  DB_PORT=..."
+        log_error "  DB_DATABASE=..."
+        log_error "  DB_USERNAME=..."
+        log_error "  DB_PASSWORD=..."
+        log_error ""
+        log_info "Common issues:"
+        log_info "  - Database server is not running"
+        log_info "  - Database credentials are incorrect"
+        log_info "  - Database user doesn't have access to the database"
+        log_info "  - Network connectivity issues (if remote database)"
+        log_info "  - Firewall blocking connection"
+        log_info ""
+        log_info "You can test the connection manually:"
+        log_info "  mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USERNAME> -p <DB_DATABASE>"
         exit 1
     fi
 }
