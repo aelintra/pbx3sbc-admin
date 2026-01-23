@@ -1,8 +1,8 @@
 # Development Session Summary
 
 **Date:** January 11-12, 2026  
-**Last Updated:** January 12, 2026  
-**Purpose:** Initial repository setup, installation, database seeding, Filament resources implementation, and installer script creation for PBX3sbc Admin Panel
+**Last Updated:** January 21, 2026  
+**Purpose:** Initial repository setup, installation, database seeding, Filament resources implementation, installer script creation, CDR/Dialog panels, Call Routes UX improvements, and multi-destination handling for PBX3sbc Admin Panel
 
 ## What We Accomplished
 
@@ -359,13 +359,92 @@ class Dispatcher extends Model
 
 **Repository:** https://github.com/aelintra/pbx3sbc-admin
 
+## Recent Work (January 18-21, 2026)
+
+### Call Routes Multi-Destination Handling
+
+**Problem Identified:**
+- When a domain has multiple destinations, the View/Edit/Delete actions in the Call Routes table only operate on the first destination
+- Users cannot manage individual destinations from the main Call Routes panel
+
+**Solution Attempted:**
+- Implemented "Option 1: Expandable Rows with Nested Destination Actions" from `CALL-ROUTE-MULTI-DESTINATION-OPTIONS.md`
+- Added "Manage Destinations" modal action button to each domain row
+- Created `resources/views/filament/tables/expandable-destinations.blade.php` view to display destinations in a modal
+- Modal shows all destinations for a domain with Edit links
+
+**Current Issue:**
+- Route name `filament.admin.resources.dispatchers.destroy` does not exist
+- Filament's DeleteAction uses a different route mechanism
+- Modal view attempts to use non-existent route for delete operations
+- **Status:** Partially working - Edit links work, Delete needs proper Filament action implementation
+
+**Files Modified:**
+- `app/Filament/Resources/CallRouteResource.php` - Added "Manage Destinations" modal action
+- `resources/views/filament/tables/expandable-destinations.blade.php` - New view for modal content
+
+**Next Steps:**
+- Implement proper delete action using Filament's action system within the modal
+- Consider using Livewire components for better integration
+- Or redirect users to Destinations panel for delete operations (current workaround)
+
+### Call Routes UX Improvements (Completed)
+
+**Completed:**
+- ✅ Renamed "Dispatchers" panel to "Destinations"
+- ✅ Unified Domain + Dispatcher management into "Call Routes" resource
+- ✅ Auto-managed `setid` field (no user input required)
+- ✅ Create Call Route: Domain dropdown with existing/new option
+- ✅ Create Call Route: Shows existing destinations when selecting existing domain
+- ✅ Edit Call Route: Domain name shown in header, not editable
+- ✅ OpenSIPS MI integration for domain_reload and dispatcher_reload
+
+**Files Created/Modified:**
+- `app/Filament/Resources/CallRouteResource.php` - Main unified resource
+- `app/Filament/Resources/CallRouteResource/Pages/CreateCallRoute.php` - Creation logic
+- `app/Filament/Resources/CallRouteResource/Pages/EditCallRoute.php` - Edit logic
+- `app/Services/OpenSIPSMIService.php` - MI communication service
+- `config/opensips.php` - MI configuration
+- `resources/views/filament/forms/components/existing-destinations-table.blade.php` - Existing destinations display
+
+### CDR and Active Calls Panels (Completed)
+
+**CDR Resource:**
+- ✅ Read-only panel with filters (date/time range, URI, SIP code, duration)
+- ✅ Removed Call-ID column (not user-friendly)
+- ✅ Removed delete actions (immutable records)
+- ✅ Date/time filter with validation and visual indicators
+- ✅ Pagination limits (no "ALL" option)
+
+**Dialog Resource (Active Calls):**
+- ✅ Read-only monitoring panel
+- ✅ Corrected state interpretation (State 4 = Established/Active)
+- ✅ Live duration calculation
+- ✅ Filters for state, URI
+
+**CDR Statistics Widget:**
+- ✅ Dashboard widget showing total calls, success rate, average duration
+- ✅ Timeframe options (today, week, month, all-time)
+
+### Installer Improvements (Completed)
+
+**Enhanced `install.sh`:**
+- ✅ Idempotent operations
+- ✅ PHP extension detection and installation
+- ✅ Composer dependency handling (auto-updates lock file if incompatible)
+- ✅ Detailed database error reporting (MySQL host permissions)
+- ✅ Nginx and PHP-FPM installation and configuration
+- ✅ File permissions setup
+- ✅ Non-interactive admin user creation
+
 ## Questions/Notes
 
 - Chat conversation tied to workspace - switching folders opens new window
 - Can continue working in this repo using absolute file paths from other workspace
 - Design documents available in `pbx3sbc/workingdocs/` for reference
 - Laravel 12 + Filament 3.x compatibility confirmed (composer.json validated)
-- Services directory is empty and ready for service class implementation
+- Services directory contains `OpenSIPSMIService.php` for MI communication
+- **Current Issue:** Multi-destination modal delete action needs proper Filament action implementation
 
 ## Ongoing Tasks
 

@@ -16,6 +16,12 @@ class DispatcherResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-server';
 
+    protected static ?string $navigationLabel = 'Destinations';
+
+    protected static ?string $modelLabel = 'Destination';
+
+    protected static ?string $pluralModelLabel = 'Destinations';
+
     public static function form(Form $form): Form
     {
         return $form
