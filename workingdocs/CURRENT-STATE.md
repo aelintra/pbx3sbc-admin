@@ -44,6 +44,11 @@
 - Alpine/Livewire console warnings (cosmetic, don't affect functionality)
 - "Manage Destinations" modal uses redirect to Destinations panel for some operations (acceptable UX pattern)
 
+## Release Preparation Tasks
+
+- [ ] **Docker Setup Documentation** - Tidy up Docker MySQL setup and create comprehensive howto document (currently optional/alternative, not in use - app connects to remote MySQL at 192.168.1.58)
+- [ ] **Herd + Remote Database Howto** - Create documentation for using Laravel Herd with remote MySQL database instance (current development setup)
+
 ## Technical Debt
 
 See `CODE-REVIEW-FINDINGS.md` for detailed analysis. Summary:

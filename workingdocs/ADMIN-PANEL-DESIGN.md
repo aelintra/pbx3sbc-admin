@@ -2,6 +2,7 @@
 
 **Date:** January 2026  
 **Last Updated:** 2026-01-22  
+**Note:** Docker MySQL setup exists but is currently optional/alternative. Current development uses remote MySQL at 192.168.1.58. Docker setup needs documentation cleanup for proper release.  
 **Version:** 1.0  
 **Status:** Implementation in Progress - Core features complete
 
@@ -573,6 +574,10 @@ Admin Panel Server (Laravel + Filament)
 - [ ] Alerting/notifications
 - [ ] S3/Minio object storage management (for long-term statistics, logs, and traces)
 - [ ] Roles and permissions system (RBAC)
+
+### Release Preparation ⏳ PLANNED
+- [ ] Docker setup documentation and cleanup (create comprehensive howto, clarify optional nature)
+- [ ] Herd + Remote Database howto (document current development setup: Herd app + remote MySQL at 192.168.1.58)
 
 ## Migration Strategy
 

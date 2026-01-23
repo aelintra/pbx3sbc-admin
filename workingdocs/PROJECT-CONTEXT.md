@@ -397,6 +397,11 @@ OPENSIPS_MI_URL=http://127.0.0.1:8888/mi  # Optional
 
 ## Next Steps / TODO
 
+### Release Preparation
+- [ ] **Docker Setup Documentation** - Tidy up Docker MySQL setup and create comprehensive howto document for proper release (currently optional/alternative setup, not in use)
+- [ ] **Herd + Remote Database Howto** - Create documentation for using Laravel Herd with remote MySQL database instance (current development setup: Herd app + remote MySQL at 192.168.1.58)
+
+### Feature Development
 - [ ] Add roles and permissions system
 - [ ] Implement OpenSIPS MI integration (optional)
 - [ ] Add more statistics widgets
