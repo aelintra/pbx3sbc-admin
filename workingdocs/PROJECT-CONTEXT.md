@@ -1,6 +1,6 @@
 # PBX3SBC Admin Panel - Project Context
 
-**Last Updated:** 2026-01-18  
+**Last Updated:** 2026-01-22  
 **Purpose:** Quick onboarding document for new chat sessions and developers
 
 ## Project Overview
@@ -139,6 +139,12 @@ Both repositories work with the **same MySQL database** (`opensips`), but have d
   - Active Calls Only (toggle, default OFF)
   - From URI, To URI
 - **Default Filter:** None (shows all calls by default)
+
+#### `app/Filament/Resources/CallRouteResource.php`
+- **Unified resource** for Domain + Dispatcher management
+- **Auto-manages setid** (hidden from users, auto-generated)
+- **Multi-destination support** via "Manage Destinations" modal
+- **OpenSIPS MI integration** (reloads after changes)
 
 #### `app/Filament/Resources/CdrResource/Pages/ViewCdr.php`
 - **No delete action** - CDRs are immutable
@@ -284,10 +290,10 @@ Both repositories work with the **same MySQL database** (`opensips`), but have d
 - State values match OpenSIPS documentation
 
 ### Management Interface (MI)
-- **Planned:** Optional MI integration for real-time operations
-- **Current:** Database-only access
-- **Config:** `OPENSIPS_MI_URL` in `.env` (optional)
-- **Important:** OpenSIPS MI module configuration (enabling module, HTTP endpoint setup) is done in `pbx3sbc` repository. This repo only contains the client service class (`OpenSIPSMIService`) to call the MI endpoint.
+- **Implemented:** OpenSIPS MI integration via `OpenSIPSMIService`
+- **Methods:** `domainReload()`, `dispatcherReload()`, `dispatcherSetState()`
+- **Config:** `OPENSIPS_MI_URL` in `.env` (optional, graceful degradation if unavailable)
+- **Usage:** Automatically called after domain/dispatcher changes
 
 ## Testing Checklist
 
@@ -312,10 +318,34 @@ Both repositories work with the **same MySQL database** (`opensips`), but have d
 
 ## Related Documentation
 
-- `CDR-FRONTEND-SPEC.md` - Detailed CDR panel specification
-- `README.md` - Installation and usage instructions
+### Core Documentation
+- `CURRENT-STATE.md` - Current implementation status and known issues
+- `CODE-REVIEW-FINDINGS.md` - Technical debt and code improvements
 - `TWO-REPO-STRATEGY.md` - Architecture decision on repository separation
-- `FILAMENT-ROLES-PERMISSIONS-GUIDE.md` - Future authorization planning
+
+### Feature Specifications
+- `CDR-FRONTEND-SPEC.md` - Detailed CDR panel specification
+- `CALL-ROUTE-MULTI-DESTINATION-OPTIONS.md` - Multi-destination design decisions
+- `ROUTE-UX-IMPROVEMENTS.md` - Call Routes UX design rationale
+
+### Implementation Guides
+- `LARAVEL-IMPLEMENTATION-GUIDE.md` - Laravel/Filament implementation patterns
+- `FILAMENT-MULTI-TABLE-OPERATIONS.md` - Multi-table operation patterns
+- `ADMIN-PANEL-EXTENSIBILITY-GUIDE.md` - How to extend the admin panel
+
+### Deployment & Setup
+- `INSTALLATION-LOG.md` - Installation steps and commands
+- `REMOTE-DEPLOYMENT-GUIDE.md` - Deploying on separate server
+- `DEVELOPMENT-STACK-RECOMMENDATIONS.md` - Development environment setup
+
+### Authentication & Authorization
+- `AUTHENTICATION-AUTHORIZATION-CLARIFICATION.md` - Auth system explanation
+- `FILAMENT-ROLES-PERMISSIONS-GUIDE.md` - RBAC implementation guide
+
+### Requirements & Assessment
+- `LARAVEL-ADDITIONAL-REQUIREMENTS-ASSESSMENT.md` - S3, Services, APIs support
+- `FRONTEND-OPTIONS-DETAILED-ANALYSIS.md` - Frontend technology comparison
+- `ADMIN-PANEL-DESIGN.md` - High-level architecture and design
 
 ## Quick Reference Commands
 
@@ -365,8 +395,7 @@ DB_PASSWORD=opensips
 OPENSIPS_MI_URL=http://127.0.0.1:8888/mi  # Optional
 ```
 
-- [ ] Multi-instance management
-- [ ] S3/Minio Object Storage Management (for long-term statistics, logs, and traces)
+## Next Steps / TODO
 
 - [ ] Add roles and permissions system
 - [ ] Implement OpenSIPS MI integration (optional)
@@ -374,16 +403,6 @@ OPENSIPS_MI_URL=http://127.0.0.1:8888/mi  # Optional
 - [ ] Export CDR functionality
 - [ ] Real-time call monitoring updates
 - [ ] Multi-instance management
-
-**Phase 2 (Priority):**
 - [ ] Service Management (Linux systemd services)
 - [ ] Remote API Integration
-- [ ] Add roles and permissions system
-- [ ] Implement OpenSIPS MI integration (optional)
-- [ ] Add more statistics widgets
-- [ ] Export CDR functionality
-- [ ] Real-time call monitoring updates
-
-**Phase 3 (Future):**
-- [ ] Multi-instance management
-- [ ] S3/Minio Object Storage Management (for long-term statistics, logs, and traces)
+- [ ] S3/Minio Object Storage Management (deferred - for long-term statistics, logs, and traces)

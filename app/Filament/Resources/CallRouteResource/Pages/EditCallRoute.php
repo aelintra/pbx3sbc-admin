@@ -37,6 +37,11 @@ class EditCallRoute extends EditRecord
                         $miService->dispatcherReload();
                     } catch (\Exception $e) {
                         \Log::warning('OpenSIPS MI reload failed after route deletion', ['error' => $e->getMessage()]);
+                        Notification::make()
+                            ->warning()
+                            ->title('OpenSIPS Module Reload Failed')
+                            ->body('The call route was deleted, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
+                            ->send();
                     }
                 }),
         ];
@@ -77,6 +82,8 @@ class EditCallRoute extends EditRecord
         $formData = $this->form->getState();
         
         // Handle single destination (not repeater)
+        // Note: Domain update already happened via Filament's save process
+        // We wrap dispatcher update in transaction for consistency
         if (!empty($formData['destination'])) {
             DB::transaction(function () use ($domain, $formData) {
                 // Check if this destination already exists
@@ -109,6 +116,7 @@ class EditCallRoute extends EditRecord
         }
 
         // Reload OpenSIPS modules
+        $miReloadSuccess = true;
         try {
             $miService = app(OpenSIPSMIService::class);
             $miService->domainReload();
@@ -116,11 +124,20 @@ class EditCallRoute extends EditRecord
         } catch (\Exception $e) {
             // Log but don't fail the operation
             \Log::warning('OpenSIPS MI reload failed after route update', ['error' => $e->getMessage()]);
+            $miReloadSuccess = false;
         }
 
         Notification::make()
             ->title('Call route updated successfully')
             ->success()
             ->send();
+
+        if (!$miReloadSuccess) {
+            Notification::make()
+                ->warning()
+                ->title('OpenSIPS Module Reload Failed')
+                ->body('The call route was updated, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
+                ->send();
+        }
     }
 }

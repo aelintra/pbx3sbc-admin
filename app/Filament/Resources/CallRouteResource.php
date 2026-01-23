@@ -41,7 +41,7 @@ class CallRouteResource extends Resource
                             })
                             ->searchable()
                             ->placeholder('Select an existing domain')
-                            ->reactive()
+                            ->live()
                             ->required()
                             ->visible(fn ($livewire) => !($livewire instanceof \App\Filament\Resources\CallRouteResource\Pages\EditCallRoute))
                             ->afterStateUpdated(function ($state, callable $set) {
@@ -162,15 +162,16 @@ class CallRouteResource extends Resource
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('dispatchers_count')
-                    ->counts('dispatchers')
                     ->label('# Destinations')
                     ->badge()
-                    ->color('info'),
+                    ->color('info')
+                    ->getStateUsing(function ($record) {
+                        return Dispatcher::where('setid', $record->setid)->count();
+                    }),
 
                 Tables\Columns\TextColumn::make('dispatchers_list')
                     ->label('Destinations')
                     ->getStateUsing(function ($record) {
-                        // Load dispatchers for this domain's setid
                         $destinations = Dispatcher::where('setid', $record->setid)->get();
                         
                         if ($destinations->isEmpty()) {

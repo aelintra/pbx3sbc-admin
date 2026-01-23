@@ -112,7 +112,7 @@ class CdrResource extends Resource
                             ->mask('99:99')
                             ->rules(['regex:/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/'])
                             ->helperText('24-hour format (e.g., 09:30, 14:15)')
-                            ->reactive(),
+                            ->live(),
                         Forms\Components\DatePicker::make('created_until_date')
                             ->label('End Date')
                             ->default(now()->format('Y-m-d'))
@@ -167,7 +167,7 @@ class CdrResource extends Resource
                                 },
                             ])
                             ->helperText('24-hour format (e.g., 17:45, 23:59)')
-                            ->reactive(),
+                            ->live(),
                     ])
                     ->indicateUsing(function (array $data): ?string {
                         $parts = [];

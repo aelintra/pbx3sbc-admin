@@ -1,123 +1,71 @@
 # Current State Summary
 
-**Last Updated:** 2026-01-21  
+**Last Updated:** 2026-01-22  
 **Purpose:** Quick reference for current implementation status and known issues
 
-**Note:** See `CALL-ROUTES-IMPLEMENTATION-STATUS.md` for detailed status of Call Routes implementation.  
-**Note:** See `CODE-REVIEW-FINDINGS.md` for comprehensive code review and technical debt analysis (15 issues identified, ready for implementation).
+**See Also:**
+- `CODE-REVIEW-FINDINGS.md` - Comprehensive code review (15 issues identified)
+- `PROJECT-CONTEXT.md` - Full project context and architecture
 
-## Recent Work (January 18-21, 2026)
+## Implementation Status
 
-### Call Routes Multi-Destination Handling
+### ✅ Completed Features
 
-**Problem:** When a domain has multiple destinations, View/Edit/Delete actions in Call Routes table only operate on the first destination.
+#### Call Routes Management
+- ✅ Unified Domain + Dispatcher management via `CallRouteResource`
+- ✅ Auto-managed `setid` field (hidden from users)
+- ✅ Domain dropdown on create (existing/new)
+- ✅ Existing destinations display in create form
+- ✅ "Manage Destinations" modal action (view/edit/delete destinations)
+- ✅ "Edit Domain" action (domain name only)
+- ✅ OpenSIPS MI integration (domain_reload, dispatcher_reload)
+- ✅ Multi-destination support (each domain can have multiple dispatcher entries)
 
-**Solution Attempted:** Implemented "Manage Destinations" modal action (Option 1 from `CALL-ROUTE-MULTI-DESTINATION-OPTIONS.md`)
+#### CDR and Active Calls Panels
+- ✅ Read-only CDR panel with comprehensive filters
+- ✅ Active Calls monitoring (Dialog resource)
+- ✅ CDR statistics widget on dashboard
+- ✅ Date/time filter with validation
+- ✅ Removed confusing columns (Call-ID) for better UX
 
-**Status:** Partially Working
-- ✅ Modal opens correctly
-- ✅ Delete destination works (removes row, updates count, triggers MI reload)
-- ✅ Edit links work (open in new tab)
-- ❌ Add destination form not working (button does nothing, no console errors)
-- ❌ Edit destination inline not working (button doesn't respond)
+#### Installer and Deployment
+- ✅ Fully automated `install.sh` script
+- ✅ Idempotent operations
+- ✅ PHP extension detection and installation
+- ✅ Nginx/PHP-FPM auto-configuration
+- ✅ Non-interactive admin user creation
+- ✅ Remote deployment support
 
-**Current Errors:**
+### ⚠️ Known Issues
 
-1. **HtmlString::make() method doesn't exist** ✅ FIXED
-   - **Location:** `app/Filament/Resources/CallRouteResource.php:203`
-   - **Fix Applied:** Changed to return view directly: `return view('filament.tables.expandable-destinations', [...]);`
+**None currently blocking** - All critical issues resolved.
 
-2. **Filament resource URL error** ✅ FIXED
-   ```
-   No Filament resource found for model [dispatchers]
-   ```
-   - **Location:** `resources/views/filament/tables/expandable-destinations.blade.php:59`
-   - **Fix Applied:** Changed from `Filament::getResourceUrl()` to `route('filament.admin.resources.dispatchers.edit', $destination)`
-   - **Status:** Fixed - All links now work correctly
+**Minor Issues:**
+- Alpine/Livewire console warnings (cosmetic, don't affect functionality)
+- "Manage Destinations" modal uses redirect to Destinations panel for some operations (acceptable UX pattern)
 
-**Files:**
-- `app/Filament/Resources/CallRouteResource.php` - Modal action definition (lines 196-211)
-- `resources/views/filament/tables/expandable-destinations.blade.php` - Modal content view
+## Technical Debt
 
-**Workaround:** Users redirected to Destinations panel for delete operations
+See `CODE-REVIEW-FINDINGS.md` for detailed analysis. Summary:
+- 3 Critical issues (deprecated methods, unused code)
+- 4 Quality issues (N+1 queries, missing notifications)
+- 3 Best practices improvements
+- 3 Potential bugs
+- 2 Architecture concerns
 
-**Current Issues:**
-1. **Add Destination Form** - Button does nothing, event handlers not firing
-2. **Edit Destination Inline** - Edit button doesn't respond
-3. **Alpine/Livewire Warnings** - Cosmetic warnings in console (don't break functionality)
+**Priority:** High priority items should be addressed soon (deprecated `reactive()` → `live()`, remove unused code).
 
-**Next Steps:**
-1. Debug why add/edit event handlers aren't firing
-2. Consider simplifying approach (use Filament's built-in mechanisms)
-3. See `CALL-ROUTES-IMPLEMENTATION-STATUS.md` for detailed analysis and recommendations
+## Key Architecture Decisions
 
-## Completed Features
-
-### Call Routes Unified UX ✅
-- Unified Domain + Dispatcher management
-- Auto-managed `setid` field
-- Domain dropdown on create
-- Existing destinations display
-- OpenSIPS MI integration
-
-### CDR and Active Calls Panels ✅
-- Read-only CDR panel with filters
-- Active Calls monitoring
-- CDR statistics widget
-- Date/time filter validation
-
-### Installer Improvements ✅
-- Idempotent operations
-- PHP extension detection
-- Nginx/PHP-FPM installation
-- Non-interactive admin user creation
-
-## Key Files Modified Recently
-
-1. **CallRouteResource.php**
-   - Added "Manage Destinations" modal action
-   - ✅ **FIXED:** Changed to return view directly (line 203)
-   - Modal should now open correctly
-
-2. **expandable-destinations.blade.php**
-   - New view for modal content
-   - Shows destinations table with Edit/Delete links
-   - Delete link currently broken (route doesn't exist)
-
-3. **OpenSIPSMIService.php**
-   - MI communication service
-   - Methods: `domainReload()`, `dispatcherReload()`
-
-4. **install.sh**
-   - Enhanced with Nginx/PHP-FPM setup
-   - Better error handling
-
-## Known Issues
-
-None - All issues resolved! ✅
-
-**Note:** Delete action redirects to Destinations panel, which is an acceptable UX pattern. Future enhancement could add inline delete in modal if needed.
-
-## Architecture Notes
-
-- **CallRouteResource** uses `Domain` model as primary
-- **setid** is auto-managed (users never see it)
+- **CallRouteResource** uses `Domain` model as primary entity
+- **setid** is auto-managed (hidden from users, auto-generated)
 - **OpenSIPS MI** calls wrapped in try-catch for graceful degradation
 - **Multi-table operations** use database transactions
+- **Read-only data** (CDR, Dialog) - no modification actions
 
-## Quick Reference
+## Related Documentation
 
-**Modal Action Location:**
-- `app/Filament/Resources/CallRouteResource.php:196-211`
-
-**Modal View:**
-- `resources/views/filament/tables/expandable-destinations.blade.php`
-
-**Error Locations:**
-- Line 203 in CallRouteResource.php (`HtmlString::make()` call)
-- Line 62-69 in expandable-destinations.blade.php (delete link - if modal worked)
-
-**Related Documentation:**
-- `CALL-ROUTE-MULTI-DESTINATION-OPTIONS.md` - Options analysis
-- `ROUTE-UX-IMPROVEMENTS.md` - UX design decisions
-- `PROJECT-CONTEXT.md` - Full project context
+- `PROJECT-CONTEXT.md` - Complete project overview
+- `CODE-REVIEW-FINDINGS.md` - Technical debt and improvements
+- `CALL-ROUTE-MULTI-DESTINATION-OPTIONS.md` - Multi-destination design decisions
+- `ROUTE-UX-IMPROVEMENTS.md` - UX design rationale

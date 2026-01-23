@@ -9,6 +9,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class DispatcherResource extends Resource
 {
@@ -86,6 +87,27 @@ class DispatcherResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query, $livewire) {
+                // Apply setid filter from URL or Livewire component state
+                $setidFilter = null;
+                
+                // Try to get from Livewire component's filter state first
+                if ($livewire && isset($livewire->tableFilters['setid']['value'])) {
+                    $setidFilter = $livewire->tableFilters['setid']['value'];
+                }
+                
+                // Fall back to URL parameters
+                if ($setidFilter === null) {
+                    $setidFilter = request()->query('tableFilters.setid.value') 
+                        ?? (request()->query('tableFilters')['setid']['value'] ?? null);
+                }
+                    
+                if ($setidFilter !== null) {
+                    $query->where('setid', (int) $setidFilter);
+                }
+                
+                return $query;
+            })
             ->columns([
                 Tables\Columns\TextColumn::make('destination')
                     ->searchable()
@@ -107,7 +129,13 @@ class DispatcherResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('setid')
                     ->label('Set ID')
-                    ->hidden(), // Hidden from UI but still functional for programmatic filtering
+                    ->hidden() // Hidden from UI but still functional for programmatic filtering
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['value'],
+                            fn (Builder $query, $setid): Builder => $query->where('setid', $setid)
+                        );
+                    }),
                 Tables\Filters\SelectFilter::make('state')
                     ->options([
                         0 => 'Active',
@@ -117,7 +145,24 @@ class DispatcherResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->successRedirectUrl(function () {
+                        // Preserve setid filter after deletion
+                        $setidFilter = request()->query('tableFilters.setid.value') 
+                            ?? (request()->query('tableFilters')['setid']['value'] ?? null);
+                            
+                        if ($setidFilter !== null) {
+                            return DispatcherResource::getUrl('index', [
+                                'tableFilters' => [
+                                    'setid' => [
+                                        'value' => $setidFilter,
+                                    ],
+                                ],
+                            ]);
+                        }
+                        
+                        return DispatcherResource::getUrl('index');
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

@@ -4,12 +4,45 @@ namespace App\Filament\Resources\DispatcherResource\Pages;
 
 use App\Filament\Resources\CallRouteResource;
 use App\Filament\Resources\DispatcherResource;
+use App\Models\Domain;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListDispatchers extends ListRecords
 {
     protected static string $resource = DispatcherResource::class;
+
+    public function getHeading(): string
+    {
+        // Get setid from filter
+        $setid = $this->tableFilters['setid']['value'] 
+            ?? request()->query('tableFilters.setid.value') 
+            ?? null;
+        
+        if ($setid !== null) {
+            // Look up the domain for this setid
+            $domain = Domain::where('setid', $setid)->first();
+            if ($domain) {
+                return $domain->domain . ' Destinations';
+            }
+        }
+        
+        return 'Destinations';
+    }
+
+    public function mount(): void
+    {
+        parent::mount();
+        
+        // Apply setid filter from URL if present
+        $setidFilter = request()->query('tableFilters.setid.value') 
+            ?? request()->query('tableFilters')['setid']['value'] 
+            ?? null;
+            
+        if ($setidFilter !== null) {
+            $this->tableFilters['setid']['value'] = (int) $setidFilter;
+        }
+    }
 
     protected function getHeaderActions(): array
     {

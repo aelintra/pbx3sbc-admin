@@ -1,8 +1,9 @@
 # OpenSIPS Admin Panel - Design Document
 
 **Date:** January 2026  
+**Last Updated:** 2026-01-22  
 **Version:** 1.0  
-**Status:** Design Phase
+**Status:** Implementation in Progress - Core features complete
 
 ## Executive Summary
 
@@ -142,42 +143,43 @@ This document outlines the design for a modern replacement of the OpenSIPS Contr
 
 ## Core Modules (MVP)
 
-### 1. Authentication & Authorization
+### 1. Authentication & Authorization ✅ IMPLEMENTED
 
-**Features:**
-- User login/logout (Filament built-in)
-- Session-based authentication (Laravel sessions)
-- Role-based access control (RBAC) - via Filament Shield or Spatie Permission
-- Password management
-- User management (Filament resource)
+**Status:** ✅ Complete
+- ✅ User login/logout (Filament built-in)
+- ✅ Session-based authentication (Laravel sessions)
+- ⏳ Role-based access control (RBAC) - Planned, not yet implemented
+- ✅ Password management
+- ✅ User management (Filament resource)
 
 **Implementation:**
 - Filament provides authentication panels out of the box
 - Uses Laravel's built-in authentication (sessions, not JWT)
-- Can integrate Filament Shield plugin for permissions
+- RBAC can be added via Filament Shield plugin (see `FILAMENT-ROLES-PERMISSIONS-GUIDE.md`)
 - User management via Filament resource
 
 **Database:**
-- `users` table (separate from OpenSIPS data)
-- `roles` table (if using RBAC package)
-- `permissions` table (if using RBAC package)
+- ✅ `users` table (created by Laravel migrations)
+- ⏳ `roles` table (if using RBAC package - planned)
+- ⏳ `permissions` table (if using RBAC package - planned)
 
-### 2. Domain Management
+### 2. Domain Management ✅ IMPLEMENTED
 
-**Features:**
-- List domains (Filament table)
-- Add domain (Filament form)
-- Edit domain (Filament form)
-- Delete domain (Filament action)
-- Domain validation (Laravel Form Requests)
-- Link to dispatcher set ID (explicit setid column)
-- Reload OpenSIPS domain module (Filament action → OpenSIPS MI)
+**Status:** ✅ Complete (via CallRouteResource)
+- ✅ List domains (Filament table)
+- ✅ Add domain (Filament form)
+- ✅ Edit domain (Filament form)
+- ✅ Delete domain (Filament action)
+- ✅ Domain validation (Laravel Form Requests)
+- ✅ Link to dispatcher set ID (explicit setid column, auto-managed)
+- ✅ Reload OpenSIPS domain module (Filament action → OpenSIPS MI)
 
 **Implementation:**
-- Filament Resource for domain management
+- Filament Resource (`CallRouteResource`) for unified domain + dispatcher management
 - Uses Eloquent Domain model
 - Form validation via Laravel Form Requests
 - Custom Filament actions for OpenSIPS MI calls (reload)
+- Auto-manages setid (hidden from users)
 
 **Database:**
 - `domain` table (OpenSIPS standard table, with added `setid` column)
@@ -205,33 +207,26 @@ interface Domain {
 }
 ```
 
-### 3. Dispatcher Management
+### 3. Dispatcher Management ✅ IMPLEMENTED
 
-**Features:**
-- List dispatcher destinations
-- Add destination (with set ID)
-- Edit destination
-- Delete destination
-- Set state (active/inactive)
-- View health status
-- Group by set ID
-- Filter by set ID
+**Status:** ✅ Complete (via CallRouteResource and DispatcherResource)
+- ✅ List dispatcher destinations
+- ✅ Add destination (with set ID, auto-managed)
+- ✅ Edit destination
+- ✅ Delete destination
+- ✅ Set state (active/inactive)
+- ⏳ View health status (planned)
+- ✅ Group by set ID (via CallRouteResource)
+- ✅ Filter by set ID
 
-**API Endpoints:**
-```
-GET    /api/dispatcher
-GET    /api/dispatcher/sets/:setid
-GET    /api/dispatcher/:id
-POST   /api/dispatcher
-PUT    /api/dispatcher/:id
-DELETE /api/dispatcher/:id
-POST   /api/dispatcher/:id/set-state
-POST   /api/dispatcher/reload  (MI command)
-GET    /api/dispatcher/stats   (health/status)
-```
+**Implementation:**
+- Unified management via `CallRouteResource` (primary interface)
+- `DispatcherResource` available for direct destination management
+- "Manage Destinations" modal for multi-destination domains
+- OpenSIPS MI integration for reload operations
 
 **Database:**
-- `dispatcher` table (OpenSIPS standard table)
+- ✅ `dispatcher` table (OpenSIPS standard table)
 
 **Data Model:**
 ```typescript
@@ -249,67 +244,62 @@ interface DispatcherDestination {
 }
 ```
 
-### 4. S3/Minio Object Storage Management
+### 4. S3/Minio Object Storage Management ⏳ PLANNED
 
-**Features:**
-- List objects/buckets (Filament table)
-- Upload objects (Filament file upload)
-- Download objects (Filament action)
-- Delete objects (Filament action)
-- Browse directory structure
-- View object metadata (size, type, last modified)
-- Manage buckets (create, delete)
+**Status:** ⏳ Planned (deferred)
+- ⏳ List objects/buckets (Filament table)
+- ⏳ Upload objects (Filament file upload)
+- ⏳ Download objects (Filament action)
+- ⏳ Delete objects (Filament action)
+- ⏳ Browse directory structure
+- ⏳ View object metadata (size, type, last modified)
+- ⏳ Manage buckets (create, delete)
 
-**Implementation:**
+**Implementation Notes:**
 - Filament Resource or custom Filament page
 - Uses Laravel Storage facade with S3/Minio driver
 - Filament file upload components for uploads
 - Custom actions for download/delete
 - Storage facade handles all S3/Minio operations
 
-**Storage Configuration:**
-- Laravel filesystem configuration for Minio (S3-compatible)
-- Environment variables for Minio credentials
-- Direct Storage facade usage (no API layer needed)
+**See:** `LARAVEL-ADDITIONAL-REQUIREMENTS-ASSESSMENT.md` for detailed implementation notes
 
-**See:** LARAVEL-ADDITIONAL-REQUIREMENTS-ASSESSMENT.md for detailed implementation notes
+### 5. Linux Service Management ⏳ PLANNED
 
-### 5. Linux Service Management
+**Status:** ⏳ Planned
+- ⏳ List services (Filament table)
+- ⏳ Start service (Filament action)
+- ⏳ Stop service (Filament action)
+- ⏳ Restart service (Filament action)
+- ⏳ View service status (Filament custom column)
+- ⏳ View service logs (Filament custom page/modal)
 
-**Features:**
-- List services (Filament table)
-- Start service (Filament action)
-- Stop service (Filament action)
-- Restart service (Filament action)
-- View service status (Filament custom column)
-- View service logs (Filament custom page/modal)
-
-**Implementation:**
+**Implementation Notes:**
 - Filament Resource for service management
 - Service class wrapping systemctl commands
 - Uses Laravel Process facade for system commands
 - Custom Filament actions for start/stop/restart
 - Requires sudoers configuration or service user permissions
 
-**Security:**
+**Security Considerations:**
 - Input validation to prevent command injection
 - Sudoers file configuration for systemctl commands
 - Logging/audit trail for all service operations
 - Permission checks before executing commands
 
-**See:** LARAVEL-ADDITIONAL-REQUIREMENTS-ASSESSMENT.md for detailed implementation notes
+**See:** `LARAVEL-ADDITIONAL-REQUIREMENTS-ASSESSMENT.md` for detailed implementation notes
 
-### 6. Remote API Integration
+### 6. Remote API Integration ⏳ PLANNED
 
-**Features:**
-- List API data (Filament table)
-- Fetch data from remote APIs (Filament action)
-- Update data to remote APIs (Filament form/action)
-- API configuration management (Filament resource)
-- View API response history/logs
-- Handle API errors gracefully
+**Status:** ⏳ Planned
+- ⏳ List API data (Filament table)
+- ⏳ Fetch data from remote APIs (Filament action)
+- ⏳ Update data to remote APIs (Filament form/action)
+- ⏳ API configuration management (Filament resource)
+- ⏳ View API response history/logs
+- ⏳ Handle API errors gracefully
 
-**Implementation:**
+**Implementation Notes:**
 - Filament Resources for API data management
 - Service classes for each external API
 - Uses Laravel HTTP facade (Guzzle) for API calls
@@ -317,37 +307,24 @@ interface DispatcherDestination {
 - Background jobs (queues) for long-running API operations
 - Caching to reduce API calls
 
-**API Service Pattern:**
-- Dedicated service class per external API
-- Handles authentication, error handling, retries
-- Can use Laravel queues for background processing
-- Filament displays data and triggers operations
+**See:** `LARAVEL-ADDITIONAL-REQUIREMENTS-ASSESSMENT.md` for detailed implementation notes
 
-**See:** LARAVEL-ADDITIONAL-REQUIREMENTS-ASSESSMENT.md for detailed implementation notes
+### 7. Multi-Instance Management ⏳ FUTURE
 
-### 7. Multi-Instance Management (Future)
+**Status:** ⏳ Future enhancement
+- ⏳ Add/remove OpenSIPS instances
+- ⏳ Instance configuration (MI endpoint, database connection)
+- ⏳ Instance health monitoring
+- ⏳ Route API requests to specific instances
 
-**Features:**
-- Add/remove OpenSIPS instances
-- Instance configuration (MI endpoint, database connection)
-- Instance health monitoring
-- Route API requests to specific instances
-
-**Features:**
-- List OpenSIPS instances (Filament resource)
-- Add/remove instances (Filament forms/actions)
-- Instance configuration (MI endpoint, database connection)
-- Instance health monitoring (Filament custom columns/widgets)
-- Route operations to specific instances (service layer)
-
-**Implementation:**
+**Implementation Notes:**
 - Filament Resource for instance management
 - Service classes route to appropriate instances
 - Health monitoring via custom Filament widgets
 - Configuration stored in database
 
 **Database:**
-- `opensips_instances` table (new)
+- ⏳ `opensips_instances` table (new, not yet created)
 - Links domains/dispatcher operations to specific instances
 
 ## Database Design
@@ -570,30 +547,32 @@ Admin Panel Server (Laravel + Filament)
 
 ## Development Roadmap
 
-### Phase 1: MVP (Weeks 1-4)
-- [ ] Project setup (Laravel + Filament)
-- [ ] Authentication module (Filament built-in)
-- [ ] Domain management (Filament Resource)
-- [ ] Dispatcher management (Filament Resource)
-- [ ] OpenSIPS MI integration (Service class)
-- [ ] Testing and documentation
+### Phase 1: MVP ✅ COMPLETE
+- [x] Project setup (Laravel + Filament)
+- [x] Authentication module (Filament built-in)
+- [x] Domain management (Filament Resource - via CallRouteResource)
+- [x] Dispatcher management (Filament Resource - via CallRouteResource)
+- [x] OpenSIPS MI integration (Service class)
+- [x] CDR/Accounting module (CDR viewing)
+- [x] Active Calls monitoring (Dialog resource)
+- [x] Testing and documentation
 
-### Phase 2: Enhancement (Weeks 5-8)
+### Phase 2: Enhancement ⏳ IN PROGRESS
+- [x] Advanced table features (search, filters, pagination - Filament built-in)
+- [x] Statistics/dashboards (CDR stats widget)
 - [ ] Linux service management (Filament Resource)
 - [ ] Remote API integration (Filament Resource/Service)
-- [ ] Advanced table features (search, filters, pagination - Filament built-in)
-- [ ] Statistics/dashboards (Filament widgets)
 - [ ] Health monitoring (Filament widgets)
 - [ ] Performance optimization
 
-### Phase 3: Future Features
-- [ ] CDR/Accounting module (already implemented - CDR viewing)
+### Phase 3: Future Features ⏳ PLANNED
 - [ ] Trunking management
 - [ ] DDI management
 - [ ] Multi-instance support
 - [ ] Advanced analytics
 - [ ] Alerting/notifications
 - [ ] S3/Minio object storage management (for long-term statistics, logs, and traces)
+- [ ] Roles and permissions system (RBAC)
 
 ## Migration Strategy
 

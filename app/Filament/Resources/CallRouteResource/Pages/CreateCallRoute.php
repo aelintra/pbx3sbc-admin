@@ -33,10 +33,13 @@ class CreateCallRoute extends CreateRecord
             }
         } else {
             // New domain - use the domain field value
-            // Auto-generate unique setid for new domain
+            // Auto-generate unique setid for new domain with transaction and lock to prevent race conditions
             if (!isset($data['setid']) || $data['setid'] === null || $data['setid'] === 0) {
-                $maxSetid = Domain::max('setid') ?? 0;
-                $data['setid'] = $maxSetid + 1;
+                $data['setid'] = DB::transaction(function () {
+                    // Lock the table to prevent concurrent setid generation
+                    $maxSetid = Domain::lockForUpdate()->max('setid') ?? 0;
+                    return $maxSetid + 1;
+                });
             }
             $this->usingExistingDomain = false;
         }
@@ -90,6 +93,7 @@ class CreateCallRoute extends CreateRecord
         }
 
         // Reload OpenSIPS modules
+        $miReloadSuccess = true;
         try {
             $miService = app(OpenSIPSMIService::class);
             $miService->domainReload();
@@ -97,11 +101,20 @@ class CreateCallRoute extends CreateRecord
         } catch (\Exception $e) {
             // Log but don't fail the operation
             \Log::warning('OpenSIPS MI reload failed after route creation', ['error' => $e->getMessage()]);
+            $miReloadSuccess = false;
         }
 
         Notification::make()
             ->title('Call route created successfully')
             ->success()
             ->send();
+
+        if (!$miReloadSuccess) {
+            Notification::make()
+                ->warning()
+                ->title('OpenSIPS Module Reload Failed')
+                ->body('The call route was created, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
+                ->send();
+        }
     }
 }
