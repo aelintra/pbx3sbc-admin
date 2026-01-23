@@ -3,6 +3,8 @@
 **Last Updated:** 2026-01-21  
 **Purpose:** Quick reference for current implementation status and known issues
 
+**Note:** See `CALL-ROUTES-IMPLEMENTATION-STATUS.md` for detailed status of Call Routes implementation.
+
 ## Recent Work (January 18-21, 2026)
 
 ### Call Routes Multi-Destination Handling
@@ -11,10 +13,12 @@
 
 **Solution Attempted:** Implemented "Manage Destinations" modal action (Option 1 from `CALL-ROUTE-MULTI-DESTINATION-OPTIONS.md`)
 
-**Status:** ✅ Working
+**Status:** Partially Working
 - ✅ Modal opens correctly
+- ✅ Delete destination works (removes row, updates count, triggers MI reload)
 - ✅ Edit links work (open in new tab)
-- ✅ Delete redirects to Destinations panel (acceptable workaround)
+- ❌ Add destination form not working (button does nothing, no console errors)
+- ❌ Edit destination inline not working (button doesn't respond)
 
 **Current Errors:**
 
@@ -36,9 +40,15 @@
 
 **Workaround:** Users redirected to Destinations panel for delete operations
 
+**Current Issues:**
+1. **Add Destination Form** - Button does nothing, event handlers not firing
+2. **Edit Destination Inline** - Edit button doesn't respond
+3. **Alpine/Livewire Warnings** - Cosmetic warnings in console (don't break functionality)
+
 **Next Steps:**
-1. ✅ **All issues fixed** - Modal is working correctly
-2. **Optional (Future Enhancement):** Could implement inline delete action in modal using Filament actions, but current redirect to Destinations panel is acceptable
+1. Debug why add/edit event handlers aren't firing
+2. Consider simplifying approach (use Filament's built-in mechanisms)
+3. See `CALL-ROUTES-IMPLEMENTATION-STATUS.md` for detailed analysis and recommendations
 
 ## Completed Features
 
