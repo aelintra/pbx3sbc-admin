@@ -29,6 +29,19 @@ class ListDispatchers extends ListRecords
         
         return 'Destinations';
     }
+    
+    public function updatedTableFilters(): void
+    {
+        // Check if setid filter is set and domain exists
+        $setid = $this->tableFilters['setid']['value'] ?? null;
+        if ($setid !== null) {
+            $domainExists = Domain::where('setid', (int) $setid)->exists();
+            if (!$domainExists) {
+                // Domain was deleted, redirect to Call Routes list
+                $this->redirect(CallRouteResource::getUrl('index'));
+            }
+        }
+    }
 
     public function mount(): void
     {
@@ -40,6 +53,14 @@ class ListDispatchers extends ListRecords
             ?? null;
             
         if ($setidFilter !== null) {
+            // Verify the domain still exists (might have been deleted)
+            $domain = Domain::where('setid', (int) $setidFilter)->first();
+            if (!$domain) {
+                // Domain was deleted, redirect to Call Routes list
+                $this->redirect(CallRouteResource::getUrl('index'));
+                return;
+            }
+            
             $this->tableFilters['setid']['value'] = (int) $setidFilter;
         }
     }

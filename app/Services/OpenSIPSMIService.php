@@ -11,7 +11,7 @@ class OpenSIPSMIService
 
     public function __construct()
     {
-        $this->miUrl = config('opensips.mi_url', env('OPENSIPS_MI_URL', 'http://127.0.0.1:8888/mi'));
+        $this->miUrl = config('opensips.mi_url', 'http://127.0.0.1:8888/mi');
     }
 
     /**
@@ -63,6 +63,7 @@ class OpenSIPSMIService
     {
         try {
             $this->call('domain_reload');
+            Log::info('OpenSIPS domain module reloaded successfully');
         } catch (\Exception $e) {
             // Log but don't throw - MI might not be available
             Log::warning('OpenSIPS domain reload failed', ['error' => $e->getMessage()]);
@@ -76,6 +77,7 @@ class OpenSIPSMIService
     {
         try {
             $this->call('dispatcher_reload');
+            Log::info('OpenSIPS dispatcher module reloaded successfully');
         } catch (\Exception $e) {
             // Log but don't throw - MI might not be available
             Log::warning('OpenSIPS dispatcher reload failed', ['error' => $e->getMessage()]);

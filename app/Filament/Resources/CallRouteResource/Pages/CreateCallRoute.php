@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\CallRouteResource\Pages;
 
 use App\Filament\Resources\CallRouteResource;
+use App\Filament\Resources\DispatcherResource;
 use App\Models\Domain;
 use App\Models\Dispatcher;
 use App\Services\OpenSIPSMIService;
+use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\DB;
@@ -16,11 +18,14 @@ class CreateCallRoute extends CreateRecord
 
     protected bool $usingExistingDomain = false;
     protected ?int $existingDomainId = null;
+    protected ?int $domainSetid = null;
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        // Handle domain selection
-        if (isset($data['domain_select']) && $data['domain_select'] !== '__new__') {
+        // Handle domain selection based on domain_type
+        $domainType = $data['domain_type'] ?? 'existing';
+        
+        if ($domainType === 'existing' && isset($data['domain_select']) && $data['domain_select'] !== '__new__') {
             // Existing domain selected - use it
             $existingDomain = Domain::where('domain', $data['domain_select'])->first();
             if ($existingDomain) {
@@ -48,8 +53,8 @@ class CreateCallRoute extends CreateRecord
         $data['accept_subdomain'] = $data['accept_subdomain'] ?? 0;
         $data['last_modified'] = now();
 
-        // Remove domain_select from data (it's not a database field)
-        unset($data['domain_select']);
+        // Remove form-only fields from data (they're not database fields)
+        unset($data['domain_select'], $data['domain_type']);
 
         return $data;
     }
@@ -75,13 +80,15 @@ class CreateCallRoute extends CreateRecord
             $domain = $this->record;
         }
 
+        // Store setid for redirect
+        $this->domainSetid = $domain->setid;
+
         $formData = $this->form->getState();
         
         // Handle single destination (not repeater)
         if (!empty($formData['destination'])) {
             DB::transaction(function () use ($domain, $formData) {
-                Dispatcher::create([
-                    'setid' => $domain->setid,
+                $domain->dispatchers()->create([
                     'destination' => $formData['destination'],
                     'weight' => $formData['weight'] ?? '1',
                     'priority' => $formData['priority'] ?? 0,
@@ -116,5 +123,29 @@ class CreateCallRoute extends CreateRecord
                 ->body('The call route was created, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
                 ->send();
         }
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        // Redirect to Destinations page filtered by the domain's setid
+        if ($this->domainSetid !== null) {
+            return DispatcherResource::getUrl('index', [
+                'tableFilters' => [
+                    'setid' => [
+                        'value' => $this->domainSetid,
+                    ],
+                ],
+            ]);
+        }
+        
+        // Fallback to call routes list if setid is not available
+        return CallRouteResource::getUrl('index');
+    }
+
+    protected function getFormActions(): array
+    {
+        return [
+            Actions\CreateAction::make(),
+        ];
     }
 }

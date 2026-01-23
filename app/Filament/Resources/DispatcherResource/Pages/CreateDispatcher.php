@@ -63,18 +63,24 @@ class CreateDispatcher extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        // Redirect back to filtered list if setid filter was present
-        $setidFilter = $this->getSetidFromFilter();
-        if ($setidFilter !== null) {
+        // Redirect back to filtered list - get setid from created record or filter
+        $setid = $this->record->setid ?? $this->getSetidFromFilter();
+        
+        if ($setid !== null) {
             return DispatcherResource::getUrl('index', [
                 'tableFilters' => [
                     'setid' => [
-                        'value' => $setidFilter,
+                        'value' => $setid,
                     ],
                 ],
             ]);
         }
         
-        return parent::getRedirectUrl();
+        return DispatcherResource::getUrl('index');
+    }
+    
+    protected function hasCreateAnotherAction(): bool
+    {
+        return false;
     }
 }

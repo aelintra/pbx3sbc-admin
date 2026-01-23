@@ -8,6 +8,10 @@ use App\Models\Domain;
 use App\Models\Dispatcher;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\Pages\ViewRecord;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -32,23 +36,58 @@ class CallRouteResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Domain')
                     ->schema([
-                        Forms\Components\Select::make('domain_select')
-                            ->label('')
-                            ->options(function () {
-                                $domains = Domain::orderBy('domain')->pluck('domain', 'domain')->toArray();
-                                $domains['__new__'] = '+ Create new domain';
-                                return $domains;
-                            })
-                            ->searchable()
-                            ->placeholder('Select an existing domain')
+                        Forms\Components\Radio::make('domain_type')
+                            ->label('Domain Type')
+                            ->options([
+                                'existing' => 'Use existing domain',
+                                'new' => 'Create new domain',
+                            ])
+                            ->default('existing')
                             ->live()
                             ->required()
-                            ->visible(fn ($livewire) => !($livewire instanceof \App\Filament\Resources\CallRouteResource\Pages\EditCallRoute))
+                            ->descriptions([
+                                'existing' => 'Select from existing domains',
+                                'new' => 'Enter a new domain name',
+                            ])
+                            ->visible(fn ($livewire) => 
+                                !($livewire instanceof EditRecord)
+                                && !($livewire instanceof ViewRecord)
+                            )
+                            ->autofocus()
                             ->afterStateUpdated(function ($state, callable $set) {
-                                if ($state === '__new__') {
+                                if ($state === 'new') {
+                                    $set('domain_select', '__new__');
                                     $set('domain', '');
                                     $set('has_existing_destinations', false);
                                 } else {
+                                    $set('domain_select', null);
+                                    $set('domain', '');
+                                    $set('has_existing_destinations', false);
+                                }
+                                // Clear new destination fields when domain type changes
+                                $set('destination', '');
+                                $set('weight', 1);
+                                $set('priority', 0);
+                                $set('state', 0);
+                                $set('description', '');
+                            }),
+
+                        Forms\Components\Select::make('domain_select')
+                            ->label('Select Domain')
+                            ->options(function () {
+                                return Domain::orderBy('domain')->pluck('domain', 'domain')->toArray();
+                            })
+                            ->searchable()
+                            ->placeholder('Search or select a domain...')
+                            ->live()
+                            ->required()
+                            ->visible(fn (callable $get, $livewire) => 
+                                !($livewire instanceof EditRecord)
+                                && !($livewire instanceof ViewRecord)
+                                && $get('domain_type') === 'existing'
+                            )
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if ($state) {
                                     $set('domain', $state);
                                     // Check if domain has existing destinations
                                     $domain = Domain::where('domain', $state)->with('dispatchers')->first();
@@ -61,9 +100,10 @@ class CallRouteResource extends Resource
                                 $set('state', 0);
                                 $set('description', '');
                             })
-                            ->helperText('Select an existing domain or choose "Create new domain"'),
+                            ->helperText('Search for an existing domain'),
 
                         Forms\Components\TextInput::make('domain')
+                            ->label('New Domain Name')
                             ->required()
                             ->maxLength(64)
                             ->unique(ignoreRecord: true)
@@ -73,14 +113,19 @@ class CallRouteResource extends Resource
                             ->validationMessages([
                                 'regex' => 'The domain must be a valid domain name (e.g., example.com).',
                             ])
-                            ->label('')
                             ->visible(fn (callable $get, $livewire) => 
-                                !($livewire instanceof \App\Filament\Resources\CallRouteResource\Pages\EditCallRoute)
-                                && $get('domain_select') === '__new__'
+                                !($livewire instanceof EditRecord)
+                                && !($livewire instanceof ViewRecord)
+                                && $get('domain_type') === 'new'
                             )
-                            ->placeholder('Enter a new domain name (e.g., example.com)'),
+                            ->placeholder('Enter a new domain name (e.g., example.com)')
+                            ->helperText('Enter a valid domain name')
+                            ->autofocus(),
                     ])
-                    ->visible(fn ($livewire) => !($livewire instanceof \App\Filament\Resources\CallRouteResource\Pages\EditCallRoute)),
+                    ->visible(fn ($livewire) => 
+                        !($livewire instanceof EditRecord)
+                        && !($livewire instanceof ViewRecord)
+                    ),
 
                 Forms\Components\Section::make('Existing Destinations')
                     ->schema([
@@ -97,10 +142,11 @@ class CallRouteResource extends Resource
                             }),
                     ])
                     ->visible(function (callable $get, $livewire) {
-                        // Only show on Create page, not Edit page
-                        return !$livewire instanceof \App\Filament\Resources\CallRouteResource\Pages\EditCallRoute
-                            && $get('domain_select') 
-                            && $get('domain_select') !== '__new__';
+                        // Only show on Create page, not Edit or View pages
+                        return !($livewire instanceof EditRecord)
+                            && !($livewire instanceof ViewRecord)
+                            && $get('domain_type') === 'existing'
+                            && $get('domain_select');
                     })
                     ->collapsible()
                     ->description('Read-only view of existing destinations for this domain'),
@@ -164,25 +210,10 @@ class CallRouteResource extends Resource
                 Tables\Columns\TextColumn::make('dispatchers_count')
                     ->label('# Destinations')
                     ->badge()
-                    ->color('info')
-                    ->getStateUsing(function ($record) {
-                        return Dispatcher::where('setid', $record->setid)->count();
-                    }),
+                    ->color('info'),
 
                 Tables\Columns\TextColumn::make('dispatchers_list')
                     ->label('Destinations')
-                    ->getStateUsing(function ($record) {
-                        $destinations = Dispatcher::where('setid', $record->setid)->get();
-                        
-                        if ($destinations->isEmpty()) {
-                            return 'No destinations';
-                        }
-                        
-                        return $destinations->take(3)->map(function ($dispatcher) {
-                            $status = $dispatcher->state == 0 ? '✓' : '✗';
-                            return "{$status} {$dispatcher->destination}";
-                        })->join(', ') . ($destinations->count() > 3 ? '...' : '');
-                    })
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('last_modified')
@@ -260,9 +291,9 @@ class CallRouteResource extends Resource
                     ->modalSubmitActionLabel('Delete Route')
                     ->before(function ($record) {
                         // Delete associated dispatchers before deleting domain
-                        Dispatcher::where('setid', $record->setid)->delete();
+                        $record->dispatchers()->delete();
                     })
-                    ->after(function () {
+                    ->after(function ($record) {
                         // Reload OpenSIPS modules after deletion
                         try {
                             $miService = app(\App\Services\OpenSIPSMIService::class);
@@ -270,7 +301,24 @@ class CallRouteResource extends Resource
                             $miService->dispatcherReload();
                         } catch (\Exception $e) {
                             \Log::warning('OpenSIPS MI reload failed after route deletion', ['error' => $e->getMessage()]);
+                            // Store in session - will be checked in successNotification
+                            session()->flash('opensips_mi_failed', true);
                         }
+                    })
+                    ->successRedirectUrl(CallRouteResource::getUrl('index'))
+                    ->successNotification(function () {
+                        $body = 'The call route has been deleted successfully.';
+                        
+                        // Check if MI reload failed
+                        if (session()->has('opensips_mi_failed')) {
+                            session()->forget('opensips_mi_failed');
+                            $body .= ' However, OpenSIPS modules could not be reloaded. You may need to reload them manually.';
+                        }
+                        
+                        return Notification::make()
+                            ->success()
+                            ->title('Call route deleted')
+                            ->body($body);
                     }),
             ])
             ->bulkActions([
@@ -279,18 +327,37 @@ class CallRouteResource extends Resource
                         ->before(function ($records) {
                             // Delete associated dispatchers before deleting domains
                             foreach ($records as $record) {
-                                Dispatcher::where('setid', $record->setid)->delete();
+                                $record->dispatchers()->delete();
                             }
                         })
-                        ->after(function () {
+                        ->after(function ($records) {
                             // Reload OpenSIPS modules after bulk deletion
+                            $miReloadSuccess = true;
                             try {
                                 $miService = app(\App\Services\OpenSIPSMIService::class);
                                 $miService->domainReload();
                                 $miService->dispatcherReload();
                             } catch (\Exception $e) {
                                 \Log::warning('OpenSIPS MI reload failed after bulk route deletion', ['error' => $e->getMessage()]);
+                                $miReloadSuccess = false;
                             }
+                            
+                            // Store MI status in session to check in success notification
+                            session()->put('last_delete_mi_status', $miReloadSuccess);
+                        })
+                        ->successRedirectUrl(CallRouteResource::getUrl('index'))
+                        ->successNotification(function () {
+                            $miStatus = session()->pull('last_delete_mi_status', true);
+                            
+                            $body = 'The call routes have been deleted successfully.';
+                            if (!$miStatus) {
+                                $body .= ' However, OpenSIPS modules could not be reloaded. You may need to reload them manually.';
+                            }
+                            
+                            return Notification::make()
+                                ->success()
+                                ->title('Call routes deleted')
+                                ->body($body);
                         }),
                 ]),
             ])

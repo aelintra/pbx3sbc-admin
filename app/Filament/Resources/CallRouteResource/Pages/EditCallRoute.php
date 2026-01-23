@@ -27,7 +27,7 @@ class EditCallRoute extends EditRecord
                 ->before(function () {
                     // Delete associated dispatchers before deleting domain
                     $domain = $this->record;
-                    Dispatcher::where('setid', $domain->setid)->delete();
+                    $domain->dispatchers()->delete();
                 })
                 ->after(function () {
                     // Reload OpenSIPS modules after deletion
@@ -43,7 +43,8 @@ class EditCallRoute extends EditRecord
                             ->body('The call route was deleted, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
                             ->send();
                     }
-                }),
+                })
+                ->successRedirectUrl(CallRouteResource::getUrl('index')),
         ];
     }
 
@@ -82,12 +83,13 @@ class EditCallRoute extends EditRecord
         $formData = $this->form->getState();
         
         // Handle single destination (not repeater)
-        // Note: Domain update already happened via Filament's save process
-        // We wrap dispatcher update in transaction for consistency
+        // Note: Domain was already saved by Filament's save process (between mutateFormDataBeforeSave and afterSave)
+        // We wrap dispatcher operations in a transaction for consistency
+        // If dispatcher update fails, it will roll back, but domain save already happened (Filament limitation)
         if (!empty($formData['destination'])) {
             DB::transaction(function () use ($domain, $formData) {
                 // Check if this destination already exists
-                $existingDispatcher = Dispatcher::where('setid', $domain->setid)
+                $existingDispatcher = $domain->dispatchers()
                     ->where('destination', $formData['destination'])
                     ->first();
                 
@@ -102,8 +104,7 @@ class EditCallRoute extends EditRecord
                     ]);
                 } else {
                     // Create new dispatcher
-                    Dispatcher::create([
-                        'setid' => $domain->setid,
+                    $domain->dispatchers()->create([
                         'destination' => $formData['destination'],
                         'weight' => $formData['weight'] ?? '1',
                         'priority' => $formData['priority'] ?? 0,

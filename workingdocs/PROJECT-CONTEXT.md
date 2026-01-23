@@ -320,7 +320,7 @@ Both repositories work with the **same MySQL database** (`opensips`), but have d
 
 ### Core Documentation
 - `CURRENT-STATE.md` - Current implementation status and known issues
-- `CODE-REVIEW-FINDINGS.md` - Technical debt and code improvements
+- `COMPREHENSIVE-CODE-REVIEW.md` - Technical debt and code improvements (most issues fixed)
 - `TWO-REPO-STRATEGY.md` - Architecture decision on repository separation
 
 ### Feature Specifications

@@ -1,6 +1,7 @@
 # Route Management UX Improvements
 
 **Date:** 2026-01-21  
+**Last Updated:** 2026-01-22  
 **Problem:** Current two-panel approach (Domain + Dispatcher) is clunky. Users must manually coordinate `setid` values, and the relationship between domain and dispatcher destinations isn't obvious.
 
 ## Current UX Problems
@@ -428,3 +429,53 @@ Single form with:
 3. **Implement auto-setid generation**
 4. **Test with real users**
 5. **Iterate based on feedback**
+
+---
+
+## Recent UX Improvements (2026-01-22)
+
+### Create Call Route Form Improvements
+
+**Problem Identified:**
+- No field focused on first render (caused user uncertainty)
+- "Create new domain" option was hidden in dropdown, only visible after clicking
+- Option appeared at bottom of long list (not visible without scrolling)
+- After creation, user saw empty View page with creation fields still visible (confusing)
+
+**Solutions Implemented:**
+
+1. **Explicit Radio Button Selection**
+   - Replaced hidden dropdown option with Radio buttons
+   - "Use existing domain" and "Create new domain" are always visible upfront
+   - No need to open dropdown to see all options
+   - Better for accessibility and clarity
+
+2. **Autofocus on Form Load**
+   - Radio button group gets autofocus when page loads
+   - User immediately knows where to start
+   - When "new" is selected, domain text input gets autofocus
+
+3. **Improved Post-Create Redirect**
+   - After creating a call route, user is redirected to Destinations page
+   - Page is automatically filtered by the domain's setid
+   - Shows all destinations for that domain, including the one just created
+   - More logical flow: create route → see destinations
+
+4. **View Page Cleanup**
+   - Creation fields (radio buttons, domain select) are now properly hidden on ViewCallRoute page
+   - View page shows only actual data, not creation form
+
+5. **Simplified Form Actions**
+   - Removed "Create and create another" button
+   - Only "Create" button shown (can be re-added later if needed)
+
+**Files Modified:**
+- `app/Filament/Resources/CallRouteResource.php` - Form schema updated with Radio buttons
+- `app/Filament/Resources/CallRouteResource/Pages/CreateCallRoute.php` - Added redirect logic, removed "create another" button
+- Visibility conditions updated to hide creation fields on View page
+
+**Result:**
+- Better initial user experience (clear choice, focused field)
+- No hidden options (all choices visible)
+- Logical post-create flow (redirect to destinations)
+- Cleaner view page (no creation fields)

@@ -3,8 +3,24 @@
 **Last Updated:** 2026-01-22  
 **Purpose:** Quick reference for current implementation status and known issues
 
+## Recent Changes (2026-01-22)
+
+### ✅ UX Improvements - Create Call Route Form
+- **Replaced hidden dropdown option with explicit Radio buttons** - "Use existing domain" vs "Create new domain" are now always visible upfront
+- **Added autofocus** - Radio button group gets focus on page load, improving initial user experience
+- **Better field visibility** - Domain select dropdown appears when "existing" is selected, domain text input appears when "new" is selected
+- **Improved redirect behavior** - After creating a call route, user is redirected to Destinations page filtered by the domain's setid (shows all destinations for that domain)
+- **Removed "Create and create another" button** - Simplified form actions to only show "Create" button
+- **Fixed view page confusion** - Creation fields (radio buttons, domain select) are now properly hidden on ViewCallRoute page
+
+### ✅ Code Quality Improvements
+- **N+1 queries fixed** - CallRouteResource now uses model accessors with eager-loaded relationships
+- **Production-ready config** - Replaced direct `env()` usage with `config()` for compatibility with config caching
+- **Better code maintainability** - Refactored direct queries to use Eloquent relationships (`$domain->dispatchers()`)
+- **Transaction scope documented** - Clarified Filament lifecycle limitations in EditCallRoute
+
 **See Also:**
-- `CODE-REVIEW-FINDINGS.md` - Comprehensive code review (15 issues identified)
+- `COMPREHENSIVE-CODE-REVIEW.md` - Comprehensive code review (most issues fixed)
 - `PROJECT-CONTEXT.md` - Full project context and architecture
 
 ## Implementation Status
@@ -14,7 +30,9 @@
 #### Call Routes Management
 - ✅ Unified Domain + Dispatcher management via `CallRouteResource`
 - ✅ Auto-managed `setid` field (hidden from users)
-- ✅ Domain dropdown on create (existing/new)
+- ✅ **Improved UX:** Radio button selection for domain type (existing/new) - always visible, no hidden options
+- ✅ **Improved UX:** Autofocus on form load for better user experience
+- ✅ **Improved UX:** Redirect to Destinations page after creation (filtered by domain setid)
 - ✅ Existing destinations display in create form
 - ✅ "Manage Destinations" modal action (view/edit/delete destinations)
 - ✅ "Edit Domain" action (domain name only)
@@ -43,6 +61,7 @@
 **Minor Issues:**
 - Alpine/Livewire console warnings (cosmetic, don't affect functionality)
 - "Manage Destinations" modal uses redirect to Destinations panel for some operations (acceptable UX pattern)
+- Delete action notifications for OpenSIPS MI reload failures (parked - session flash not persisting through Filament redirects)
 
 ## Release Preparation Tasks
 
@@ -51,14 +70,30 @@
 
 ## Technical Debt
 
-See `CODE-REVIEW-FINDINGS.md` for detailed analysis. Summary:
-- 3 Critical issues (deprecated methods, unused code)
-- 4 Quality issues (N+1 queries, missing notifications)
-- 3 Best practices improvements
-- 3 Potential bugs
-- 2 Architecture concerns
+See `COMPREHENSIVE-CODE-REVIEW.md` for detailed analysis. 
 
-**Priority:** High priority items should be addressed soon (deprecated `reactive()` → `live()`, remove unused code).
+### ✅ Recently Fixed (2026-01-22)
+
+**Code Quality:**
+- ✅ **N+1 queries in CallRouteResource** - Fixed using model accessors with eager-loaded relationships
+- ✅ **Direct `env()` usage** - Fixed, now uses `config()` only (production-ready)
+- ✅ **Direct queries instead of relationships** - Refactored to use `$domain->dispatchers()` relationship throughout
+- ✅ **Transaction scope** - Documented Filament lifecycle limitation
+
+**UX Improvements:**
+- ✅ **Create Call Route form** - Replaced hidden dropdown with explicit Radio buttons for domain type selection
+- ✅ **Form autofocus** - Radio button group gets focus on page load
+- ✅ **Post-create redirect** - Redirects to Destinations page filtered by domain setid (shows destinations for created route)
+- ✅ **View page cleanup** - Creation fields properly hidden on ViewCallRoute page
+- ✅ **Simplified form actions** - Removed "Create and create another" button
+
+### ⏳ Parked Issues
+- ⏳ **Delete action notifications** - Session flash not persisting through Filament redirects (needs different approach)
+
+### Low Priority (Nice to Have)
+- Unused page files (CreateCdr, EditCdr, CreateDialog, EditDialog)
+- URL parameter handling simplification
+- CreateCallRoute form logic documentation
 
 ## Key Architecture Decisions
 

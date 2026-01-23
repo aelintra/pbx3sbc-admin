@@ -103,7 +103,12 @@ class DispatcherResource extends Resource
                 }
                     
                 if ($setidFilter !== null) {
-                    $query->where('setid', (int) $setidFilter);
+                    // Verify the domain still exists before filtering
+                    $domainExists = \App\Models\Domain::where('setid', (int) $setidFilter)->exists();
+                    if ($domainExists) {
+                        $query->where('setid', (int) $setidFilter);
+                    }
+                    // If domain doesn't exist, don't apply filter (will show all, but mount() should redirect)
                 }
                 
                 return $query;
@@ -133,7 +138,15 @@ class DispatcherResource extends Resource
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->when(
                             $data['value'],
-                            fn (Builder $query, $setid): Builder => $query->where('setid', $setid)
+                            function (Builder $query, $setid): Builder {
+                                // Verify the domain still exists before filtering
+                                $domainExists = \App\Models\Domain::where('setid', $setid)->exists();
+                                if (!$domainExists) {
+                                    // Domain was deleted - clear the filter to show all (will redirect in mount)
+                                    return $query;
+                                }
+                                return $query->where('setid', $setid);
+                            }
                         );
                     }),
                 Tables\Filters\SelectFilter::make('state')
@@ -146,16 +159,27 @@ class DispatcherResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
-                    ->successRedirectUrl(function () {
+                    ->successRedirectUrl(function ($record, $livewire) {
                         // Preserve setid filter after deletion
-                        $setidFilter = request()->query('tableFilters.setid.value') 
-                            ?? (request()->query('tableFilters')['setid']['value'] ?? null);
+                        // Get setid from the record being deleted (most reliable)
+                        $setid = $record->setid ?? null;
+                        
+                        // Fall back to Livewire component filter state
+                        if ($setid === null && $livewire && isset($livewire->tableFilters['setid']['value'])) {
+                            $setid = $livewire->tableFilters['setid']['value'];
+                        }
+                        
+                        // Fall back to URL query parameter
+                        if ($setid === null) {
+                            $setid = request()->query('tableFilters.setid.value') 
+                                ?? (request()->query('tableFilters')['setid']['value'] ?? null);
+                        }
                             
-                        if ($setidFilter !== null) {
+                        if ($setid !== null) {
                             return DispatcherResource::getUrl('index', [
                                 'tableFilters' => [
                                     'setid' => [
-                                        'value' => $setidFilter,
+                                        'value' => $setid,
                                     ],
                                 ],
                             ]);
