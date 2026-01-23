@@ -10,6 +10,8 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateDispatcher extends CreateRecord
 {
     protected static string $resource = DispatcherResource::class;
+    
+    protected static bool $canCreateAnother = false;
 
     protected function getSetidFromFilter(): ?int
     {
@@ -77,10 +79,5 @@ class CreateDispatcher extends CreateRecord
         }
         
         return DispatcherResource::getUrl('index');
-    }
-    
-    protected function hasCreateAnotherAction(): bool
-    {
-        return false;
     }
 }

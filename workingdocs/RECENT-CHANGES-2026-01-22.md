@@ -99,8 +99,20 @@ This session focused on **UX improvements for the Create Call Route form** and *
 - `ROUTE-UX-IMPROVEMENTS.md` - Added section documenting these improvements
 - `COMPREHENSIVE-CODE-REVIEW.md` - Updated with fix status
 
+## Additional Fixes (Later in Session)
+
+### Destinations Panel Improvements
+- ✅ **Fixed delete action filter preservation** - Delete action now gets setid from `$record->setid` to preserve filter
+- ✅ **Fixed create destination redirect** - Redirects back to filtered Destinations list instead of Edit page
+- ✅ **Removed "Create & create another" button** - Using `protected static bool $canCreateAnother = false;` (correct Filament 3.x approach)
+- ✅ **Fixed delete call route redirect** - Added explicit redirects to Call Routes list after deletion
+- ✅ **Added domain validation** - Destinations page checks if domain exists when setid filter is present
+
+**Key Learning:** In Filament 3.x, use `protected static bool $canCreateAnother = false;` to remove "Create & create another" button. Using `getFormActions()` causes modal behavior.
+
 ## Next Steps (If Needed)
 
 - ⏳ Delete action notifications (parked - session flash not persisting)
 - Low priority: Remove unused page files (CreateCdr, EditCdr, etc.)
 - Low priority: Simplify URL parameter handling
+- Low priority: Fix "Add Destination" and "Edit Destination Inline" in modal (noted in CURRENT-STATE.md)

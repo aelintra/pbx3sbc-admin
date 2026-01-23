@@ -10,8 +10,15 @@
 - **Added autofocus** - Radio button group gets focus on page load, improving initial user experience
 - **Better field visibility** - Domain select dropdown appears when "existing" is selected, domain text input appears when "new" is selected
 - **Improved redirect behavior** - After creating a call route, user is redirected to Destinations page filtered by the domain's setid (shows all destinations for that domain)
-- **Removed "Create and create another" button** - Simplified form actions to only show "Create" button
+- **Removed "Create and create another" button** - Using `protected static bool $canCreateAnother = false;` in CreateCallRoute page
 - **Fixed view page confusion** - Creation fields (radio buttons, domain select) are now properly hidden on ViewCallRoute page
+
+### ✅ UX Improvements - Destinations Panel
+- **Fixed delete action filter preservation** - When deleting a destination, the setid filter is now preserved by getting it from the deleted record
+- **Fixed create destination redirect** - After creating a destination, user is redirected back to Destinations list filtered by setid (not to Edit page)
+- **Removed "Create and create another" button** - Using `protected static bool $canCreateAnother = false;` in CreateDispatcher page
+- **Fixed delete call route redirect** - When deleting a call route, user is redirected to Call Routes list (prevents showing all destinations with invalid filter)
+- **Added domain validation** - Destinations page validates domain exists when setid filter is present, redirects if domain was deleted
 
 ### ✅ Code Quality Improvements
 - **N+1 queries fixed** - CallRouteResource now uses model accessors with eager-loaded relationships
@@ -62,6 +69,7 @@
 - Alpine/Livewire console warnings (cosmetic, don't affect functionality)
 - "Manage Destinations" modal uses redirect to Destinations panel for some operations (acceptable UX pattern)
 - Delete action notifications for OpenSIPS MI reload failures (parked - session flash not persisting through Filament redirects)
+- "Add Destination" and "Edit Destination Inline" in modal not working (noted in CURRENT-STATE.md)
 
 ## Release Preparation Tasks
 
