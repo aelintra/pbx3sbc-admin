@@ -16,6 +16,11 @@ class DomainResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-globe-alt';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false; // Hidden - use Call Routes instead
+    }
+
     public static function form(Form $form): Form
     {
         return $form

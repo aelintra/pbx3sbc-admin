@@ -193,8 +193,51 @@ class CallRouteResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\Action::make('edit_domain')
+                    ->label('Edit Domain')
+                    ->icon('heroicon-o-pencil')
+                    ->color('warning')
+                    ->modalHeading(fn ($record) => 'Edit Domain: ' . $record->domain)
+                    ->form([
+                        Forms\Components\TextInput::make('domain')
+                            ->required()
+                            ->maxLength(64)
+                            ->unique(ignoreRecord: true)
+                            ->rules([
+                                'regex:/^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/',
+                            ])
+                            ->validationMessages([
+                                'regex' => 'The domain must be a valid domain name (e.g., example.com).',
+                            ])
+                            ->label('Domain Name'),
+                    ])
+                    ->fillForm(function ($record) {
+                        return [
+                            'domain' => $record->domain,
+                        ];
+                    })
+                    ->action(function ($record, array $data) {
+                        $record->update([
+                            'domain' => $data['domain'],
+                            'last_modified' => now(),
+                        ]);
+
+                        // Reload OpenSIPS modules after domain update
+                        try {
+                            $miService = app(\App\Services\OpenSIPSMIService::class);
+                            $miService->domainReload();
+                        } catch (\Exception $e) {
+                            \Log::warning('OpenSIPS MI reload failed after domain update', ['error' => $e->getMessage()]);
+                        }
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Domain updated')
+                            ->body('The domain has been updated and OpenSIPS modules reloaded.')
+                            ->send();
+                    }),
                 Tables\Actions\Action::make('manage_destinations')
-                    ->label('Manage Destinations')
+                    ->label('Manage')
                     ->icon('heroicon-o-server')
                     ->color('info')
                     ->modalHeading(fn ($record) => 'Destinations for ' . $record->domain)
@@ -207,9 +250,15 @@ class CallRouteResource extends Resource
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close'),
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
+                    ->requiresConfirmation()
+                    ->modalHeading('Delete Call Route')
+                    ->modalDescription(fn ($record) => 
+                        'This will delete the domain "' . $record->domain . '" and ALL of its destinations. ' .
+                        'This action cannot be undone. ' .
+                        'If you only want to delete individual destinations, use the "Manage" button instead.'
+                    )
+                    ->modalSubmitActionLabel('Delete Route')
                     ->before(function ($record) {
                         // Delete associated dispatchers before deleting domain
                         Dispatcher::where('setid', $record->setid)->delete();
