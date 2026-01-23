@@ -31,11 +31,15 @@ class DispatcherResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('setid')
+                Forms\Components\Hidden::make('setid')
+                    ->default(function () {
+                        // Auto-fill from URL filter if present
+                        $filters = request()->get('tableFilters', []);
+                        $setidFilter = $filters['setid']['value'] ?? request()->query('tableFilters.setid.value') ?? request()->query('setid') ?? null;
+                        return $setidFilter !== null ? (int) $setidFilter : 0;
+                    })
                     ->required()
-                    ->rules(['integer', 'min:0'])
-                    ->default(0)
-                    ->label('Set ID'),
+                    ->dehydrated(),
                 Forms\Components\TextInput::make('destination')
                     ->required()
                     ->maxLength(192)
@@ -83,9 +87,6 @@ class DispatcherResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('setid')
-                    ->sortable()
-                    ->label('Set ID'),
                 Tables\Columns\TextColumn::make('destination')
                     ->searchable()
                     ->sortable()
@@ -105,7 +106,8 @@ class DispatcherResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('setid')
-                    ->label('Set ID'),
+                    ->label('Set ID')
+                    ->hidden(), // Hidden from UI but still functional for programmatic filtering
                 Tables\Filters\SelectFilter::make('state')
                     ->options([
                         0 => 'Active',

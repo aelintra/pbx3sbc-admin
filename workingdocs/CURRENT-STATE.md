@@ -3,7 +3,8 @@
 **Last Updated:** 2026-01-21  
 **Purpose:** Quick reference for current implementation status and known issues
 
-**Note:** See `CALL-ROUTES-IMPLEMENTATION-STATUS.md` for detailed status of Call Routes implementation.
+**Note:** See `CALL-ROUTES-IMPLEMENTATION-STATUS.md` for detailed status of Call Routes implementation.  
+**Note:** See `CODE-REVIEW-FINDINGS.md` for comprehensive code review and technical debt analysis (15 issues identified, ready for implementation).
 
 ## Recent Work (January 18-21, 2026)
 

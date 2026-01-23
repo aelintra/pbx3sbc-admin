@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CallRouteResource\Pages;
+use App\Filament\Resources\DispatcherResource;
 use App\Models\Domain;
 use App\Models\Dispatcher;
 use Filament\Forms;
@@ -237,19 +238,16 @@ class CallRouteResource extends Resource
                             ->send();
                     }),
                 Tables\Actions\Action::make('manage_destinations')
-                    ->label('Manage')
+                    ->label('Manage Destinations')
                     ->icon('heroicon-o-server')
                     ->color('info')
-                    ->modalHeading(fn ($record) => 'Destinations for ' . $record->domain)
-                    ->modalContent(function ($record) {
-                        $destinations = $record->dispatchers;
-                        return view('filament.tables.expandable-destinations', [
-                            'destinations' => $destinations,
-                            'domain' => $record,
-                        ]);
-                    })
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Close'),
+                    ->url(fn ($record) => DispatcherResource::getUrl('index', [
+                        'tableFilters' => [
+                            'setid' => [
+                                'value' => $record->setid,
+                            ],
+                        ],
+                    ])),
                 Tables\Actions\DeleteAction::make()
                     ->requiresConfirmation()
                     ->modalHeading('Delete Call Route')
