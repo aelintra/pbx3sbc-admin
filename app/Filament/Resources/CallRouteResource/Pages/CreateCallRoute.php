@@ -144,10 +144,4 @@ class CreateCallRoute extends CreateRecord
         return CallRouteResource::getUrl('index');
     }
 
-    protected function getFormActions(): array
-    {
-        return [
-            Actions\CreateAction::make(),
-        ];
-    }
 }
