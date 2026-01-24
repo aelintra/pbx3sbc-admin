@@ -41,7 +41,7 @@
 - ✅ **Improved UX:** Autofocus on form load for better user experience
 - ✅ **Improved UX:** Redirect to Destinations page after creation (filtered by domain setid)
 - ✅ Existing destinations display in create form
-- ✅ "Manage Destinations" modal action (view/edit/delete destinations)
+- ✅ "Manage Destinations" action (redirects to Destinations panel filtered by setid)
 - ✅ "Edit Domain" action (domain name only)
 - ✅ OpenSIPS MI integration (domain_reload, dispatcher_reload)
 - ✅ Multi-destination support (each domain can have multiple dispatcher entries)
@@ -67,9 +67,7 @@
 
 **Minor Issues:**
 - Alpine/Livewire console warnings (cosmetic, don't affect functionality)
-- "Manage Destinations" modal uses redirect to Destinations panel for some operations (acceptable UX pattern)
 - Delete action notifications for OpenSIPS MI reload failures (parked - session flash not persisting through Filament redirects)
-- "Add Destination" and "Edit Destination Inline" in modal not working (noted in CURRENT-STATE.md)
 
 ## Release Preparation Tasks
 
@@ -114,6 +112,6 @@ See `COMPREHENSIVE-CODE-REVIEW.md` for detailed analysis.
 ## Related Documentation
 
 - `PROJECT-CONTEXT.md` - Complete project overview
-- `CODE-REVIEW-FINDINGS.md` - Technical debt and improvements
-- `CALL-ROUTE-MULTI-DESTINATION-OPTIONS.md` - Multi-destination design decisions
-- `ROUTE-UX-IMPROVEMENTS.md` - UX design rationale
+- `CODE-QUALITY.md` - Code review, best practices, and recommendations
+- `UX-DESIGN-DECISIONS.md` - UX design decisions and rationale
+- `ARCHITECTURE.md` - System architecture and design decisions

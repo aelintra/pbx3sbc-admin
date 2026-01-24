@@ -143,7 +143,7 @@ Both repositories work with the **same MySQL database** (`opensips`), but have d
 #### `app/Filament/Resources/CallRouteResource.php`
 - **Unified resource** for Domain + Dispatcher management
 - **Auto-manages setid** (hidden from users, auto-generated)
-- **Multi-destination support** via "Manage Destinations" modal
+- **Multi-destination support** via "Manage Destinations" action (redirects to Destinations panel)
 - **OpenSIPS MI integration** (reloads after changes)
 
 #### `app/Filament/Resources/CdrResource/Pages/ViewCdr.php`
@@ -320,32 +320,28 @@ Both repositories work with the **same MySQL database** (`opensips`), but have d
 
 ### Core Documentation
 - `CURRENT-STATE.md` - Current implementation status and known issues
-- `COMPREHENSIVE-CODE-REVIEW.md` - Technical debt and code improvements (most issues fixed)
-- `TWO-REPO-STRATEGY.md` - Architecture decision on repository separation
+- `CODE-QUALITY.md` - Code review, best practices, and recommendations
+- `README.md` - Documentation index
 
-### Feature Specifications
-- `CDR-FRONTEND-SPEC.md` - Detailed CDR panel specification
-- `CALL-ROUTE-MULTI-DESTINATION-OPTIONS.md` - Multi-destination design decisions
-- `ROUTE-UX-IMPROVEMENTS.md` - Call Routes UX design rationale
+### Architecture & Design
+- `ARCHITECTURE.md` - System architecture, two-repository strategy, and design decisions
+- `UX-DESIGN-DECISIONS.md` - UX design decisions and rationale
 
-### Implementation Guides
-- `LARAVEL-IMPLEMENTATION-GUIDE.md` - Laravel/Filament implementation patterns
-- `FILAMENT-MULTI-TABLE-OPERATIONS.md` - Multi-table operation patterns
-- `ADMIN-PANEL-EXTENSIBILITY-GUIDE.md` - How to extend the admin panel
+### Implementation
+- `IMPLEMENTATION-GUIDE.md` - Laravel/Filament implementation patterns and extensibility guide
+- `AUTHENTICATION.md` - Authentication and authorization system
 
 ### Deployment & Setup
-- `INSTALLATION-LOG.md` - Installation steps and commands
-- `REMOTE-DEPLOYMENT-GUIDE.md` - Deploying on separate server
+- `DEPLOYMENT.md` - Deployment guide for local and remote installations
 - `DEVELOPMENT-STACK-RECOMMENDATIONS.md` - Development environment setup
-
-### Authentication & Authorization
-- `AUTHENTICATION-AUTHORIZATION-CLARIFICATION.md` - Auth system explanation
-- `FILAMENT-ROLES-PERMISSIONS-GUIDE.md` - RBAC implementation guide
 
 ### Requirements & Assessment
 - `LARAVEL-ADDITIONAL-REQUIREMENTS-ASSESSMENT.md` - S3, Services, APIs support
 - `FRONTEND-OPTIONS-DETAILED-ANALYSIS.md` - Frontend technology comparison
-- `ADMIN-PANEL-DESIGN.md` - High-level architecture and design
+- `ADMIN-PANEL-PLANNING-APPROACH.md` - Planning methodology and task breakdown
+
+### Archive
+- `archive/` folder - Historical documents, detailed logs, and superseded documentation
 
 ## Quick Reference Commands
 

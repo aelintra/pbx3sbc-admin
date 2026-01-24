@@ -16,6 +16,8 @@ class CreateCallRoute extends CreateRecord
 {
     protected static string $resource = CallRouteResource::class;
 
+    protected static bool $canCreateAnother = false;
+
     protected bool $usingExistingDomain = false;
     protected ?int $existingDomainId = null;
     protected ?int $domainSetid = null;

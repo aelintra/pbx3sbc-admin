@@ -11,7 +11,7 @@ class Domain extends Model
     
     public $timestamps = false;
     
-    protected $fillable = ['domain', 'setid', 'attrs', 'accept_subdomain'];
+    protected $fillable = ['domain', 'setid', 'attrs', 'accept_subdomain', 'last_modified'];
 
     /**
      * Get all dispatcher destinations for this domain's setid
