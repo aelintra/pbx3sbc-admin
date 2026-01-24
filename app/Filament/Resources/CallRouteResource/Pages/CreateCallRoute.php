@@ -7,10 +7,10 @@ use App\Filament\Resources\DispatcherResource;
 use App\Models\Domain;
 use App\Models\Dispatcher;
 use App\Services\OpenSIPSMIService;
-use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CreateCallRoute extends CreateRecord
 {
@@ -109,7 +109,7 @@ class CreateCallRoute extends CreateRecord
             $miService->dispatcherReload();
         } catch (\Exception $e) {
             // Log but don't fail the operation
-            \Log::warning('OpenSIPS MI reload failed after route creation', ['error' => $e->getMessage()]);
+            Log::warning('OpenSIPS MI reload failed after route creation', ['error' => $e->getMessage()]);
             $miReloadSuccess = false;
         }
 
