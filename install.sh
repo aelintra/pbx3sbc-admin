@@ -859,22 +859,19 @@ install_dependencies() {
             
             # Regenerate lock file for current PHP version
             log_info "Regenerating composer.lock for PHP $(php -r 'echo PHP_VERSION;')..."
-            if ! $TIMEOUT_CMD composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader --lock; then
+            log_info "This may take several minutes..."
+            if ! $TIMEOUT_CMD composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
                 log_error "Failed to regenerate dependencies"
                 log_error "Please check your PHP version and composer.json requirements"
                 # Restore backup if update failed
                 if [[ -f "composer.lock.backup" ]]; then
                     mv composer.lock.backup composer.lock
+                    log_info "Restored original composer.lock from backup"
                 fi
                 exit 1
             fi
             
-            # Now install with the new lock file
-            log_info "Installing dependencies with regenerated lock file..."
-            if ! $TIMEOUT_CMD composer install --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
-                log_error "Failed to install dependencies after lock file regeneration"
-                exit 1
-            fi
+            log_success "Dependencies regenerated and installed successfully"
         elif [[ $INSTALL_EXIT -eq 124 ]]; then
             log_error "Composer install timed out after 15 minutes"
             log_info "This may be due to network issues or large dependency trees"
