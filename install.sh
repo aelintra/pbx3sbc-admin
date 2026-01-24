@@ -817,18 +817,20 @@ install_dependencies() {
     export COMPOSER_ALLOW_SUPERUSER=1
     # Disable plugins for non-interactive mode
     export COMPOSER_DISABLE_XDEBUG_WARN=1
+    # Increase memory limit for composer operations
+    export COMPOSER_MEMORY_LIMIT=-1
+    
+    # Check if timeout command is available
+    if command -v timeout &> /dev/null; then
+        TIMEOUT_CMD="timeout 900"  # 15 minutes for composer operations
+    else
+        TIMEOUT_CMD=""
+        log_warn "timeout command not available, composer may hang if there are issues"
+    fi
     
     if [[ -f "composer.lock" ]]; then
         # Try to install from lock file first
         log_info "Attempting to install from composer.lock..."
-        
-        # Check if timeout command is available
-        if command -v timeout &> /dev/null; then
-            TIMEOUT_CMD="timeout 300"
-        else
-            TIMEOUT_CMD=""
-            log_warn "timeout command not available, composer may hang if there are issues"
-        fi
         
         # Run composer install and capture both stdout and stderr
         # Use a temporary file to capture output since command substitution might hang
@@ -847,14 +849,36 @@ install_dependencies() {
         # Check if lock file is incompatible
         if echo "$COMPOSER_OUTPUT" | grep -q "Your lock file does not contain a compatible set of packages"; then
             log_warn "Lock file is incompatible with current PHP version."
-            log_info "Updating dependencies to match current PHP version..."
-            if ! $TIMEOUT_CMD composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
-                log_error "Failed to install dependencies"
+            log_info "Removing incompatible lock file and regenerating dependencies..."
+            
+            # Backup the old lock file
+            if [[ -f "composer.lock" ]]; then
+                mv composer.lock composer.lock.backup
+                log_info "Backed up old composer.lock to composer.lock.backup"
+            fi
+            
+            # Regenerate lock file for current PHP version
+            log_info "Regenerating composer.lock for PHP $(php -r 'echo PHP_VERSION;')..."
+            if ! $TIMEOUT_CMD composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader --lock; then
+                log_error "Failed to regenerate dependencies"
                 log_error "Please check your PHP version and composer.json requirements"
+                # Restore backup if update failed
+                if [[ -f "composer.lock.backup" ]]; then
+                    mv composer.lock.backup composer.lock
+                fi
+                exit 1
+            fi
+            
+            # Now install with the new lock file
+            log_info "Installing dependencies with regenerated lock file..."
+            if ! $TIMEOUT_CMD composer install --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
+                log_error "Failed to install dependencies after lock file regeneration"
                 exit 1
             fi
         elif [[ $INSTALL_EXIT -eq 124 ]]; then
-            log_error "Composer install timed out after 5 minutes"
+            log_error "Composer install timed out after 15 minutes"
+            log_info "This may be due to network issues or large dependency trees"
+            log_info "You can try running: composer install --no-interaction --prefer-dist"
             exit 1
         elif [[ $INSTALL_EXIT -ne 0 ]]; then
             log_warn "Composer install failed (exit code: $INSTALL_EXIT). Trying update..."
@@ -866,7 +890,7 @@ install_dependencies() {
         fi
     else
         log_info "No composer.lock found. Installing dependencies..."
-        if ! timeout 600 composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
+        if ! $TIMEOUT_CMD composer install --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
             log_error "Failed to install dependencies"
             exit 1
         fi
