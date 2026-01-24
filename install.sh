@@ -819,6 +819,8 @@ install_dependencies() {
     export COMPOSER_DISABLE_XDEBUG_WARN=1
     # Increase memory limit for composer operations
     export COMPOSER_MEMORY_LIMIT=-1
+    # Set PHP memory limit explicitly (unlimited)
+    export PHP_MEMORY_LIMIT=-1
     
     # Check if timeout command is available
     if command -v timeout &> /dev/null; then
@@ -859,17 +861,30 @@ install_dependencies() {
             
             # Regenerate lock file for current PHP version
             log_info "Regenerating composer.lock for PHP $(php -r 'echo PHP_VERSION;')..."
-            log_info "This may take several minutes..."
-            if ! $TIMEOUT_CMD composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
-                log_error "Failed to regenerate dependencies"
-                log_error "Please check your PHP version and composer.json requirements"
-                # Restore backup if update failed
-                if [[ -f "composer.lock.backup" ]]; then
-                    mv composer.lock.backup composer.lock
-                    log_info "Restored original composer.lock from backup"
+            log_info "This may take several minutes and use significant memory..."
+            
+            # Try composer update without optimize-autoloader first (less memory intensive)
+            # We'll optimize after successful installation
+            if ! $TIMEOUT_CMD php -d memory_limit=-1 $(which composer) update --no-interaction --no-plugins --prefer-dist; then
+                log_warn "Composer update failed, trying with reduced memory optimization..."
+                # If that fails, try without any optimization flags
+                if ! $TIMEOUT_CMD php -d memory_limit=2G $(which composer) update --no-interaction --no-plugins --prefer-dist --no-scripts; then
+                    log_error "Failed to regenerate dependencies"
+                    log_error "This may be due to insufficient system memory"
+                    log_error "Please check your PHP version and composer.json requirements"
+                    log_error "You may need to increase system memory or run: composer update manually"
+                    # Restore backup if update failed
+                    if [[ -f "composer.lock.backup" ]]; then
+                        mv composer.lock.backup composer.lock
+                        log_info "Restored original composer.lock from backup"
+                    fi
+                    exit 1
                 fi
-                exit 1
             fi
+            
+            # Now optimize autoloader with the new lock file
+            log_info "Optimizing autoloader..."
+            php -d memory_limit=-1 $(which composer) dump-autoload --optimize --no-interaction --quiet || true
             
             log_success "Dependencies regenerated and installed successfully"
         elif [[ $INSTALL_EXIT -eq 124 ]]; then
