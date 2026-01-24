@@ -787,6 +787,56 @@ EOF
             log_warn "Could not start nginx. You may need to start it manually: sudo systemctl start nginx"
         fi
     fi
+    
+    # Configure UFW firewall rules
+    configure_ufw
+}
+
+configure_ufw() {
+    # Check if UFW is installed and active
+    if ! command -v ufw &> /dev/null; then
+        log_info "UFW is not installed. Skipping firewall configuration."
+        return 0
+    fi
+    
+    log_info "Configuring UFW firewall rules..."
+    
+    # Check if UFW is active
+    if sudo ufw status | grep -q "Status: active"; then
+        log_info "UFW is active. Adding rules for HTTP and HTTPS..."
+        
+        # Allow HTTP (port 80)
+        if sudo ufw status | grep -q "80/tcp"; then
+            log_info "Port 80 is already allowed"
+        else
+            if sudo ufw allow 80/tcp &>/dev/null; then
+                log_success "Allowed HTTP (port 80) in UFW"
+            else
+                log_warn "Could not allow port 80 in UFW. You may need to run: sudo ufw allow 80/tcp"
+            fi
+        fi
+        
+        # Allow HTTPS (port 443)
+        if sudo ufw status | grep -q "443/tcp"; then
+            log_info "Port 443 is already allowed"
+        else
+            if sudo ufw allow 443/tcp &>/dev/null; then
+                log_success "Allowed HTTPS (port 443) in UFW"
+            else
+                log_warn "Could not allow port 443 in UFW. You may need to run: sudo ufw allow 443/tcp"
+            fi
+        fi
+        
+        # Show current status
+        log_info "Current UFW status:"
+        sudo ufw status | grep -E "(Status|80|443)" || true
+    else
+        log_info "UFW is installed but not active. Skipping firewall rules."
+        log_info "To enable UFW and allow HTTP/HTTPS, run:"
+        log_info "  sudo ufw allow 80/tcp"
+        log_info "  sudo ufw allow 443/tcp"
+        log_info "  sudo ufw enable"
+    fi
 }
 
 check_prerequisites() {
