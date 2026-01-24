@@ -14,7 +14,7 @@ class ListCallRoutes extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->createAnother(false),
+                ->disableCreateAnother(),
         ];
     }
 }
