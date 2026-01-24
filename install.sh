@@ -1425,6 +1425,40 @@ set_permissions() {
     log_success "Permissions configured"
 }
 
+get_open_ports() {
+    OPEN_PORTS=()
+    
+    # Check if UFW is installed and active
+    if command -v ufw &> /dev/null && sudo ufw status 2>/dev/null | grep -q "Status: active"; then
+        # Get HTTP port
+        if sudo ufw status 2>/dev/null | grep -q "80/tcp"; then
+            OPEN_PORTS+=("80 (HTTP)")
+        fi
+        
+        # Get HTTPS port
+        if sudo ufw status 2>/dev/null | grep -q "443/tcp"; then
+            OPEN_PORTS+=("443 (HTTPS)")
+        fi
+    fi
+    
+    # Also check if nginx is listening on ports (even if UFW isn't active)
+    if command -v ss &> /dev/null; then
+        PORT_80_OPEN=false
+        PORT_443_OPEN=false
+        for port in "${OPEN_PORTS[@]}"; do
+            [[ "$port" == "80 (HTTP)" ]] && PORT_80_OPEN=true
+            [[ "$port" == "443 (HTTPS)" ]] && PORT_443_OPEN=true
+        done
+        
+        if sudo ss -tlnp 2>/dev/null | grep -q ":80 "; then
+            [[ "$PORT_80_OPEN" == "false" ]] && OPEN_PORTS+=("80 (HTTP)")
+        fi
+        if sudo ss -tlnp 2>/dev/null | grep -q ":443 "; then
+            [[ "$PORT_443_OPEN" == "false" ]] && OPEN_PORTS+=("443 (HTTPS)")
+        fi
+    fi
+}
+
 display_summary() {
     log_success "Installation completed successfully!"
     echo
@@ -1432,13 +1466,49 @@ display_summary() {
     echo -e "${BLUE}Installation Summary${NC}"
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo
+    
+    # Get open ports
+    get_open_ports
+    
+    # Display firewall/ports banner
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}Firewall & Network Ports${NC}"
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    
+    if command -v ufw &> /dev/null; then
+        UFW_STATUS=$(sudo ufw status 2>/dev/null | head -n1 | grep -o "Status: [a-z]*" || echo "Status: unknown")
+        echo -e "UFW Status: ${UFW_STATUS}"
+        echo
+    fi
+    
+    if [[ ${#OPEN_PORTS[@]} -gt 0 ]]; then
+        echo -e "${GREEN}✓ Open Ports:${NC}"
+        for port in "${OPEN_PORTS[@]}"; do
+            echo -e "  ${GREEN}• Port ${port}${NC}"
+        done
+    else
+        echo -e "${YELLOW}⚠ No open ports detected${NC}"
+        if command -v ufw &> /dev/null && ! sudo ufw status 2>/dev/null | grep -q "Status: active"; then
+            echo -e "  UFW is not active. To open ports manually:"
+            echo -e "  ${GREEN}sudo ufw allow 80/tcp${NC}"
+            echo -e "  ${GREEN}sudo ufw allow 443/tcp${NC}"
+        fi
+    fi
+    
+    echo
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo
     echo -e "Admin panel is ready to use!"
     echo
     echo -e "${YELLOW}Next steps:${NC}"
     echo -e "  1. Access the admin panel:"
     if command -v nginx &> /dev/null && systemctl is-active --quiet nginx 2>/dev/null; then
         SERVER_NAME=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
+        SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "")
         echo -e "     ${GREEN}http://${SERVER_NAME}/admin${NC}"
+        if [[ -n "$SERVER_IP" ]] && [[ "$SERVER_NAME" != "$SERVER_IP" ]]; then
+            echo -e "     ${GREEN}http://${SERVER_IP}/admin${NC}"
+        fi
         echo -e "     (nginx is configured and running)"
     else
         echo -e "     Start the development server:"
