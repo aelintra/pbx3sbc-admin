@@ -334,11 +334,13 @@ Both repositories work with the **same MySQL database** (`opensips`), but have d
 ### Deployment & Setup
 - `DEPLOYMENT.md` - Deployment guide for local and remote installations
 - `DEVELOPMENT-STACK-RECOMMENDATIONS.md` - Development environment setup
+- `HERD-REMOTE-DATABASE-SETUP.md` - Guide for configuring Laravel Herd with remote MySQL database
 
 ### Requirements & Assessment
 - `LARAVEL-ADDITIONAL-REQUIREMENTS-ASSESSMENT.md` - S3, Services, APIs support
 - `FRONTEND-OPTIONS-DETAILED-ANALYSIS.md` - Frontend technology comparison
 - `ADMIN-PANEL-PLANNING-APPROACH.md` - Planning methodology and task breakdown
+- `ADMIN-PANEL-SECURITY-REQUIREMENTS.md` - Security management features requirements and implementation plan
 
 ### Archive
 - `archive/` folder - Historical documents, detailed logs, and superseded documentation
@@ -383,7 +385,7 @@ Key `.env` variables:
 ```env
 APP_URL=http://pbx3sbc-admin.test  # or your domain
 DB_CONNECTION=mysql
-DB_HOST=192.168.1.58  # or 127.0.0.1 for local
+DB_HOST=3.93.26.82  # or 127.0.0.1 for local, or remote IP
 DB_PORT=3306
 DB_DATABASE=opensips
 DB_USERNAME=opensips
@@ -391,13 +393,18 @@ DB_PASSWORD=opensips
 OPENSIPS_MI_URL=http://127.0.0.1:8888/mi  # Optional
 ```
 
+**Note:** See `HERD-REMOTE-DATABASE-SETUP.md` for detailed instructions on configuring remote database connections.
+
 ## Next Steps / TODO
 
 ### Release Preparation
 - [ ] **Docker Setup Documentation** - Tidy up Docker MySQL setup and create comprehensive howto document for proper release (currently optional/alternative setup, not in use)
-- [ ] **Herd + Remote Database Howto** - Create documentation for using Laravel Herd with remote MySQL database instance (current development setup: Herd app + remote MySQL at 192.168.1.58)
+- [x] **Herd + Remote Database Howto** - Created `HERD-REMOTE-DATABASE-SETUP.md` for using Laravel Herd with remote MySQL database instance (current development setup: Herd app + remote MySQL at 3.93.26.82)
 
 ### Feature Development
+- [x] **Security Management Phase 1** - Failed Registrations, Door-Knock Attempts, Security Widgets (completed)
+- [ ] **Security Management Phase 2** - Fail2ban Whitelist Management, Fail2ban Status Page (pending)
+- [ ] **Security Management Phase 3** - Manual ban/unban, ban history, advanced alerts (pending)
 - [ ] Add roles and permissions system
 - [ ] Implement OpenSIPS MI integration (optional)
 - [ ] Add more statistics widgets

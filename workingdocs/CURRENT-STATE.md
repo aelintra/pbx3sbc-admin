@@ -5,6 +5,23 @@
 
 ## Recent Changes (2026-01-22)
 
+### ✅ Security Management - Phase 1: Viewing & Monitoring
+- **Failed Registrations Resource** - Read-only resource with filters (username, domain, IP, response code, date range)
+- **Door-Knock Attempts Resource** - Read-only resource with filters (domain, IP, reason, method, date range)
+- **Security Dashboard Widgets:**
+  - `FailedRegistrationsStatsWidget` - Statistics for last 24h, today, week, month, all-time
+  - `DoorKnockAttemptsStatsWidget` - Statistics for last 24h, today, week, month, all-time
+  - `Fail2banStatusWidget` - Placeholder (will be enhanced in Phase 2)
+  - `SecurityAlertsWidget` - High-risk IPs, scanner detections, 403 errors
+- **Features:** Auto-refresh (30s), badge colors, top IP tracking, comprehensive filtering
+- **Models:** `FailedRegistration`, `DoorKnockAttempt` (both with scopes and accessors)
+
+### ✅ Development Environment Setup
+- **Herd + Remote Database Guide** - Created `HERD-REMOTE-DATABASE-SETUP.md` for configuring local Herd to use remote MySQL
+- **Remote Database Connection** - Successfully configured to connect to test system at 3.93.26.82
+
+## Recent Changes (2026-01-22 - Earlier)
+
 ### ✅ UX Improvements - Create Call Route Form
 - **Replaced hidden dropdown option with explicit Radio buttons** - "Use existing domain" vs "Create new domain" are now always visible upfront
 - **Added autofocus** - Radio button group gets focus on page load, improving initial user experience
@@ -53,6 +70,14 @@
 - ✅ Date/time filter with validation
 - ✅ Removed confusing columns (Call-ID) for better UX
 
+#### Security Management (Phase 1)
+- ✅ Failed Registrations Resource (read-only, comprehensive filters)
+- ✅ Door-Knock Attempts Resource (read-only, comprehensive filters)
+- ✅ Security Dashboard Widgets (4 widgets with statistics and alerts)
+- ✅ Models with scopes and accessors for filtering and display
+- ⏸️ Phase 2: Fail2ban Management (pending)
+- ⏸️ Phase 3: Advanced Features (pending)
+
 #### Installer and Deployment
 - ✅ Fully automated `install.sh` script
 - ✅ Idempotent operations
@@ -71,8 +96,8 @@
 
 ## Release Preparation Tasks
 
-- [ ] **Docker Setup Documentation** - Tidy up Docker MySQL setup and create comprehensive howto document (currently optional/alternative, not in use - app connects to remote MySQL at 192.168.1.58)
-- [ ] **Herd + Remote Database Howto** - Create documentation for using Laravel Herd with remote MySQL database instance (current development setup)
+- [ ] **Docker Setup Documentation** - Tidy up Docker MySQL setup and create comprehensive howto document (currently optional/alternative, not in use - app connects to remote MySQL at 3.93.26.82)
+- [x] **Herd + Remote Database Howto** - Created `HERD-REMOTE-DATABASE-SETUP.md` for using Laravel Herd with remote MySQL database instance
 
 ## Technical Debt
 
@@ -107,7 +132,8 @@ See `COMPREHENSIVE-CODE-REVIEW.md` for detailed analysis.
 - **setid** is auto-managed (hidden from users, auto-generated)
 - **OpenSIPS MI** calls wrapped in try-catch for graceful degradation
 - **Multi-table operations** use database transactions
-- **Read-only data** (CDR, Dialog) - no modification actions
+- **Read-only data** (CDR, Dialog, FailedRegistration, DoorKnockAttempt) - no modification actions
+- **Security Resources** follow same read-only pattern as CDR/Dialog (data comes from OpenSIPS)
 
 ## Related Documentation
 
