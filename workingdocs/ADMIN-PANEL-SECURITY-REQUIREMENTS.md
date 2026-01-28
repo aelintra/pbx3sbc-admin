@@ -6,7 +6,9 @@
 
 ## Overview
 
-This document outlines the security management features that need to be added to the pbx3sbc-admin web interface. These features will allow administrators to view, manage, and monitor the security elements implemented in Phase 1.1 and Phase 2.2 of the Security Implementation Plan.
+This document outlines the security management features that need to be added to the pbx3sbc-admin web interface. These features will allow administrators to view, manage, and monitor the security elements implemented in Phase 1.1, Phase 2.2, and Phase 3.3 of the Security Implementation Plan.
+
+**Note:** Phase 3.3 (Statistics & Reporting) has been moved to the admin panel as it primarily involves data visualization, reporting, and statistics - these are user-facing features that belong in the web interface, not core OpenSIPS functionality.
 
 ## Security Features to Implement
 
@@ -217,21 +219,33 @@ fail2ban-client set opensips-brute-force unban --all
 
 ---
 
-### 5. Security Dashboard Widgets
+### 5. Security Statistics & Reporting (Phase 3.3)
+
+**Objective:** Provide comprehensive security statistics and reporting
+
+**Note:** This replaces Phase 3.3 from the Security Implementation Plan - statistics and reporting belong in the admin panel, not core OpenSIPS.
 
 **Features:**
+
+#### 5.1 Security Dashboard Widgets
+
 - **Failed Registrations Widget:**
   - Count of failed registrations in last 24 hours
-  - Chart showing trend over time
+  - Chart showing trend over time (hourly/daily)
   - Top 5 source IPs
+  - Failed registrations by domain
+  - Failed registrations by response code
 - **Door-Knock Attempts Widget:**
   - Count of door-knock attempts in last 24 hours
-  - Chart showing trend over time
+  - Chart showing trend over time (hourly/daily)
   - Top 5 source IPs
+  - Door-knock attempts by reason
+  - Door-knock attempts by method
 - **Fail2ban Status Widget:**
   - Currently banned IPs count
   - Jail status (enabled/disabled)
   - Recent bans (last 10)
+  - Bans in last 24 hours
 - **Security Alerts Widget:**
   - High-risk IPs (many failures)
   - Recent security events
@@ -242,6 +256,35 @@ fail2ban-client set opensips-brute-force unban --all
 - `DoorKnockAttemptsStatsWidget`
 - `Fail2banStatusWidget`
 - `SecurityAlertsWidget`
+
+#### 5.2 Security Statistics Views
+
+**Database Queries/Views (computed via Laravel, not SQL views):**
+- `security_stats_hourly` - Hourly event counts (computed via Eloquent)
+- `top_attacking_ips` - Top attacking IPs (computed via Eloquent)
+- `registration_failure_stats` - Registration failure trends (computed via Eloquent)
+- `door_knock_stats_by_reason` - Door-knock statistics by reason
+- `security_trends_daily` - Daily security event trends
+
+**Note:** Statistics can be computed via Laravel Eloquent queries. SQL views are optional optimization but not required.
+
+#### 5.3 Reporting Features
+
+- **Generate Security Reports:**
+  - Date range selection
+  - Filter by event type, IP, domain
+  - Export to CSV/PDF
+  - Email reports (optional)
+- **Report Types:**
+  - Failed registrations report
+  - Door-knock attempts report
+  - Combined security report
+  - Top attacking IPs report
+  - Security trends report
+
+**Filament Resources:**
+- `SecurityReportResource` (custom page for report generation)
+- Export actions on FailedRegistrationResource and DoorKnockAttemptResource
 
 ---
 
