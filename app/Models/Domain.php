@@ -12,6 +12,22 @@ class Domain extends Model
     public $timestamps = false;
     
     protected $fillable = ['domain', 'setid', 'attrs', 'accept_subdomain', 'last_modified'];
+    
+    /**
+     * Boot the model.
+     * Automatically populate attrs column from setid when creating or updating.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::saving(function ($domain) {
+            // Automatically populate attrs from setid if setid is set
+            if ($domain->setid !== null && $domain->setid !== '') {
+                $domain->attrs = 'setid=' . $domain->setid;
+            }
+        });
+    }
 
     /**
      * Get all dispatcher destinations for this domain's setid

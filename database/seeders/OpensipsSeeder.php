@@ -36,7 +36,7 @@ class OpensipsSeeder extends Seeder
         DB::table('domain')->insert([
             'domain' => 'example.com',
             'setid' => 15,
-            'attrs' => null,
+            'attrs' => 'setid=15', // Automatically populate attrs from setid
             'accept_subdomain' => 0,
             'last_modified' => now(),
         ]);
