@@ -141,3 +141,5 @@ See `COMPREHENSIVE-CODE-REVIEW.md` for detailed analysis.
 - `CODE-QUALITY.md` - Code review, best practices, and recommendations
 - `UX-DESIGN-DECISIONS.md` - UX design decisions and rationale
 - `ARCHITECTURE.md` - System architecture and design decisions
+- `ADMIN-PANEL-SECURITY-REQUIREMENTS.md` - Security management features requirements and implementation plan
+- `HERD-REMOTE-DATABASE-SETUP.md` - Guide for configuring Herd with remote MySQL database
