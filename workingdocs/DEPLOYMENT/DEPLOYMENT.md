@@ -269,6 +269,6 @@ See `DEVELOPMENT-STACK-RECOMMENDATIONS.md` for detailed development environment 
 
 ## Related Documentation
 
-- `PROJECT-CONTEXT.md` - Project overview and architecture
-- `CURRENT-STATE.md` - Current implementation status
-- `ARCHITECTURE.md` - System architecture
+- `../ARCHITECTURE/PROJECT-CONTEXT.md` - Project overview and architecture
+- `../QUICK-REFERENCES/CURRENT-STATE.md` - Current implementation status
+- `../ARCHITECTURE/ARCHITECTURE.md` - System architecture

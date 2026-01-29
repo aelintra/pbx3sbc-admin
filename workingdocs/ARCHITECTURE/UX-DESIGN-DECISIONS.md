@@ -233,6 +233,6 @@ Route: tenant3.com → PBX Multi-Tenant (192.168.1.50:5060)
 
 ## Related Documentation
 
-- `PROJECT-CONTEXT.md` - Project architecture and database schema
-- `CURRENT-STATE.md` - Current implementation status
-- `CODE-QUALITY.md` - Code review and best practices
+- `PROJECT-CONTEXT.md` (this folder) - Project architecture and database schema
+- `../QUICK-REFERENCES/CURRENT-STATE.md` - Current implementation status
+- `../IMPLEMENTATION/CODE-QUALITY.md` - Code review and best practices

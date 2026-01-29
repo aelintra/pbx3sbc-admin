@@ -272,6 +272,6 @@ SHOW GRANTS FOR 'opensips'@'%';
 
 ## Related Documentation
 
-- `PROJECT-CONTEXT.md` - Project overview and database connection details
-- `DEPLOYMENT.md` - Production deployment guide
+- `../ARCHITECTURE/PROJECT-CONTEXT.md` - Project overview and database connection details
+- `DEPLOYMENT.md` (this folder) - Production deployment guide
 - `DEVELOPMENT-STACK-RECOMMENDATIONS.md` - Development environment recommendations

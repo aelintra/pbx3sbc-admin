@@ -44,8 +44,8 @@
 - **Transaction scope documented** - Clarified Filament lifecycle limitations in EditCallRoute
 
 **See Also:**
-- `COMPREHENSIVE-CODE-REVIEW.md` - Comprehensive code review (most issues fixed)
-- `PROJECT-CONTEXT.md` - Full project context and architecture
+- `../archive/COMPREHENSIVE-CODE-REVIEW.md` - Comprehensive code review (most issues fixed)
+- `../ARCHITECTURE/PROJECT-CONTEXT.md` - Full project context and architecture
 
 ## Implementation Status
 
@@ -101,7 +101,7 @@
 
 ## Technical Debt
 
-See `COMPREHENSIVE-CODE-REVIEW.md` for detailed analysis. 
+See `../archive/COMPREHENSIVE-CODE-REVIEW.md` for detailed analysis. 
 
 ### ✅ Recently Fixed (2026-01-22)
 
@@ -137,9 +137,9 @@ See `COMPREHENSIVE-CODE-REVIEW.md` for detailed analysis.
 
 ## Related Documentation
 
-- `PROJECT-CONTEXT.md` - Complete project overview
-- `CODE-QUALITY.md` - Code review, best practices, and recommendations
-- `UX-DESIGN-DECISIONS.md` - UX design decisions and rationale
-- `ARCHITECTURE.md` - System architecture and design decisions
-- `ADMIN-PANEL-SECURITY-REQUIREMENTS.md` - Security management features requirements and implementation plan
-- `HERD-REMOTE-DATABASE-SETUP.md` - Guide for configuring Herd with remote MySQL database
+- `../ARCHITECTURE/PROJECT-CONTEXT.md` - Complete project overview
+- `../IMPLEMENTATION/CODE-QUALITY.md` - Code review, best practices, and recommendations
+- `../ARCHITECTURE/UX-DESIGN-DECISIONS.md` - UX design decisions and rationale
+- `../ARCHITECTURE/ARCHITECTURE.md` - System architecture and design decisions
+- `../REQUIREMENTS/ADMIN-PANEL-SECURITY-REQUIREMENTS.md` - Security management features requirements and implementation plan
+- `../DEPLOYMENT/HERD-REMOTE-DATABASE-SETUP.md` - Guide for configuring Herd with remote MySQL database

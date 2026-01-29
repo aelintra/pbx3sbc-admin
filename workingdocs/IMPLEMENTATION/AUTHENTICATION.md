@@ -221,6 +221,6 @@ php artisan shield:generate --all
 
 ## Related Documentation
 
-- `PROJECT-CONTEXT.md` - Project overview
-- `CURRENT-STATE.md` - Current implementation status
-- `ARCHITECTURE.md` - System architecture
+- `../ARCHITECTURE/PROJECT-CONTEXT.md` - Project overview
+- `../QUICK-REFERENCES/CURRENT-STATE.md` - Current implementation status
+- `../ARCHITECTURE/ARCHITECTURE.md` - System architecture

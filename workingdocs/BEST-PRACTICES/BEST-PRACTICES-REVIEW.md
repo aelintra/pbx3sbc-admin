@@ -277,5 +277,5 @@ The codebase demonstrates **strong adherence to Laravel and Filament best practi
 ## Related Documentation
 
 - `COMPREHENSIVE-CODE-REVIEW.md` - Previous comprehensive review (most issues fixed)
-- `CURRENT-STATE.md` - Current implementation status
-- `PROJECT-CONTEXT.md` - Project architecture and decisions
+- `../QUICK-REFERENCES/CURRENT-STATE.md` - Current implementation status
+- `../ARCHITECTURE/PROJECT-CONTEXT.md` - Project architecture and decisions

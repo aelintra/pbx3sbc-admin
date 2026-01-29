@@ -281,5 +281,5 @@ $domainExists = Domain::where('setid', (int) $setidFilter)->exists();
 
 ## Related Documentation
 
-- `CURRENT-STATE.md` - Current implementation status
-- `PROJECT-CONTEXT.md` - Project architecture and decisions
+- `../QUICK-REFERENCES/CURRENT-STATE.md` - Current implementation status
+- `../ARCHITECTURE/PROJECT-CONTEXT.md` - Project architecture and decisions

@@ -650,8 +650,8 @@ Before considering code complete, verify:
 
 For detailed examples and patterns, see:
 - `IMPLEMENTATION-GUIDE.md` - Detailed implementation patterns
-- `CODE-QUALITY.md` - Best practices review
-- `ARCHITECTURE.md` - System architecture patterns
+- `CODE-QUALITY.md` (this folder) - Best practices review
+- `../ARCHITECTURE/ARCHITECTURE.md` - System architecture patterns
 
 ---
 

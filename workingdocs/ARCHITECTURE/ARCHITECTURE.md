@@ -348,7 +348,7 @@ sudo ./install.sh
 
 ## Related Documentation
 
-- `PROJECT-CONTEXT.md` - Complete project overview and quick reference
-- `CURRENT-STATE.md` - Current implementation status
+- `PROJECT-CONTEXT.md` (this folder) - Complete project overview and quick reference
+- `../QUICK-REFERENCES/CURRENT-STATE.md` - Current implementation status
 - `UX-DESIGN-DECISIONS.md` - UX design decisions and rationale
-- `CODE-QUALITY.md` - Code review and best practices
+- `../IMPLEMENTATION/CODE-QUALITY.md` - Code review and best practices

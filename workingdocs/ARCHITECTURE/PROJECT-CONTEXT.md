@@ -319,28 +319,28 @@ Both repositories work with the **same MySQL database** (`opensips`), but have d
 ## Related Documentation
 
 ### Core Documentation
-- `CURRENT-STATE.md` - Current implementation status and known issues
-- `CODE-QUALITY.md` - Code review, best practices, and recommendations
-- `README.md` - Documentation index
+- `../QUICK-REFERENCES/CURRENT-STATE.md` - Current implementation status and known issues
+- `../IMPLEMENTATION/CODE-QUALITY.md` - Code review, best practices, and recommendations
+- `../README.md` - Documentation index
 
 ### Architecture & Design
-- `ARCHITECTURE.md` - System architecture, two-repository strategy, and design decisions
-- `UX-DESIGN-DECISIONS.md` - UX design decisions and rationale
+- `ARCHITECTURE.md` (this folder) - System architecture, two-repository strategy, and design decisions
+- `UX-DESIGN-DECISIONS.md` (this folder) - UX design decisions and rationale
 
 ### Implementation
-- `IMPLEMENTATION-GUIDE.md` - Laravel/Filament implementation patterns and extensibility guide
-- `AUTHENTICATION.md` - Authentication and authorization system
+- `../IMPLEMENTATION/IMPLEMENTATION-GUIDE.md` - Laravel/Filament implementation patterns and extensibility guide
+- `../IMPLEMENTATION/AUTHENTICATION.md` - Authentication and authorization system
 
 ### Deployment & Setup
-- `DEPLOYMENT.md` - Deployment guide for local and remote installations
-- `DEVELOPMENT-STACK-RECOMMENDATIONS.md` - Development environment setup
-- `HERD-REMOTE-DATABASE-SETUP.md` - Guide for configuring Laravel Herd with remote MySQL database
+- `../DEPLOYMENT/DEPLOYMENT.md` - Deployment guide for local and remote installations
+- `../DEPLOYMENT/DEVELOPMENT-STACK-RECOMMENDATIONS.md` - Development environment setup
+- `../DEPLOYMENT/HERD-REMOTE-DATABASE-SETUP.md` - Guide for configuring Laravel Herd with remote MySQL database
 
 ### Requirements & Assessment
-- `LARAVEL-ADDITIONAL-REQUIREMENTS-ASSESSMENT.md` - S3, Services, APIs support
-- `FRONTEND-OPTIONS-DETAILED-ANALYSIS.md` - Frontend technology comparison
-- `ADMIN-PANEL-PLANNING-APPROACH.md` - Planning methodology and task breakdown
-- `ADMIN-PANEL-SECURITY-REQUIREMENTS.md` - Security management features requirements and implementation plan
+- `../REQUIREMENTS/LARAVEL-ADDITIONAL-REQUIREMENTS-ASSESSMENT.md` - S3, Services, APIs support
+- `../REQUIREMENTS/FRONTEND-OPTIONS-DETAILED-ANALYSIS.md` - Frontend technology comparison
+- `../REQUIREMENTS/ADMIN-PANEL-PLANNING-APPROACH.md` - Planning methodology and task breakdown
+- `../REQUIREMENTS/ADMIN-PANEL-SECURITY-REQUIREMENTS.md` - Security management features requirements and implementation plan
 
 ### Archive
 - `archive/` folder - Historical documents, detailed logs, and superseded documentation

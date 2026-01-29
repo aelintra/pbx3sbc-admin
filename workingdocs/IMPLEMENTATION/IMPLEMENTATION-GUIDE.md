@@ -569,7 +569,7 @@ protected function getRedirectUrl(): string
 
 ## Related Documentation
 
-- `PROJECT-CONTEXT.md` - Project overview and database schema
-- `CODE-QUALITY.md` - Code review and best practices
-- `ARCHITECTURE.md` - System architecture
+- `../ARCHITECTURE/PROJECT-CONTEXT.md` - Project overview and database schema
+- `CODE-QUALITY.md` (this folder) - Code review and best practices
+- `../ARCHITECTURE/ARCHITECTURE.md` - System architecture
 - `UX-DESIGN-DECISIONS.md` - UX design decisions
