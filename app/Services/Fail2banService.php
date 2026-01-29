@@ -17,10 +17,18 @@ class Fail2banService
         $result = Process::run(['sudo', 'fail2ban-client', 'status', $this->jailName]);
         
         if (!$result->successful()) {
+            Log::error('Fail2ban status command failed', [
+                'exit_code' => $result->exitCode(),
+                'error_output' => $result->errorOutput(),
+                'output' => $result->output(),
+            ]);
             throw new \Exception('Failed to get Fail2Ban status: ' . $result->errorOutput());
         }
         
-        return $this->parseStatus($result->output());
+        $output = $result->output();
+        Log::debug('Fail2ban status output', ['output' => $output]);
+        
+        return $this->parseStatus($output);
     }
     
     /**
@@ -159,7 +167,18 @@ class Fail2banService
         }
         
         // Check if enabled (jail exists and has status)
-        $status['enabled'] = strpos($output, 'Status for the jail') !== false;
+        // If fail2ban-client status succeeds, the jail exists and is enabled
+        // Look for status indicators in the output
+        $hasStatusHeader = (
+            stripos($output, 'Status for the jail') !== false ||
+            stripos($output, 'Filter') !== false ||
+            stripos($output, 'Actions') !== false ||
+            stripos($output, 'Currently failed') !== false ||
+            stripos($output, 'Currently banned') !== false
+        );
+        
+        // Jail is enabled if we see status indicators (command succeeded = jail exists)
+        $status['enabled'] = $hasStatusHeader;
         
         return $status;
     }

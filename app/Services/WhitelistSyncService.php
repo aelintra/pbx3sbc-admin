@@ -12,86 +12,82 @@ class WhitelistSyncService
     protected string $jailConfig = '/etc/fail2ban/jail.d/opensips-brute-force.conf';
     
     /**
+     * Get the path to the sync script
+     */
+    protected function getSyncScriptPath(): string
+    {
+        // Allow override via environment variable
+        $scriptPath = env('FAIL2BAN_SYNC_SCRIPT_PATH');
+        
+        if ($scriptPath && file_exists($scriptPath)) {
+            return $scriptPath;
+        }
+        
+        // Try common locations
+        $commonPaths = [
+            '/home/ubuntu/pbx3sbc/scripts/sync-fail2ban-whitelist.sh',
+            '/opt/pbx3sbc/scripts/sync-fail2ban-whitelist.sh',
+            '/usr/local/pbx3sbc/scripts/sync-fail2ban-whitelist.sh',
+            base_path('../pbx3sbc/scripts/sync-fail2ban-whitelist.sh'),
+        ];
+        
+        foreach ($commonPaths as $path) {
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+        
+        // Default fallback
+        return '/home/ubuntu/pbx3sbc/scripts/sync-fail2ban-whitelist.sh';
+    }
+    
+    /**
      * Sync whitelist from database to Fail2Ban config file
      */
     public function sync(): bool
     {
         try {
-            // Get all whitelist entries from database
-            $whitelistEntries = Fail2banWhitelist::orderBy('created_at')->get();
+            $scriptPath = $this->getSyncScriptPath();
             
-            // Build ignoreip line
-            $ips = $whitelistEntries->pluck('ip_or_cidr')->filter()->toArray();
-            $ignoreipValue = implode(' ', $ips);
-            
-            // Read current config file
-            if (!File::exists($this->jailConfig)) {
-                Log::error('Fail2Ban jail config not found', ['path' => $this->jailConfig]);
+            if (!file_exists($scriptPath)) {
+                Log::error('Fail2Ban sync script not found', ['path' => $scriptPath]);
                 return false;
             }
             
-            $configContent = File::get($this->jailConfig);
+            // Get database credentials from Laravel config
+            $dbName = config('database.connections.mysql.database');
+            $dbUser = config('database.connections.mysql.username');
+            $dbPass = config('database.connections.mysql.password');
             
-            // Update ignoreip line
-            if (preg_match('/^ignoreip\s*=/m', $configContent)) {
-                // Replace existing ignoreip line
-                $configContent = preg_replace(
-                    '/^ignoreip\s*=.*$/m',
-                    'ignoreip = ' . $ignoreipValue,
-                    $configContent
-                );
-            } else {
-                // Add new ignoreip line after commented ignoreip or before Notes section
-                if (preg_match('/^# ignoreip/m', $configContent)) {
-                    $configContent = preg_replace(
-                        '/^# ignoreip.*$/m',
-                        "# ignoreip\nignoreip = " . $ignoreipValue,
-                        $configContent
-                    );
-                } else {
-                    // Insert before Notes section
-                    $configContent = preg_replace(
-                        '/^# Notes:/m',
-                        "ignoreip = " . $ignoreipValue . "\n\n# Notes:",
-                        $configContent
-                    );
-                }
-            }
+            // Prepare environment variables for the script
+            $env = [
+                'DB_NAME' => $dbName,
+                'DB_USER' => $dbUser,
+                'DB_PASS' => $dbPass,
+            ];
             
-            // Add comments for each IP
-            $comments = [];
-            foreach ($whitelistEntries as $entry) {
-                if ($entry->comment) {
-                    $comments[] = "#   {$entry->ip_or_cidr} - {$entry->comment}";
-                }
-            }
-            
-            // Remove old comments and add new ones after ignoreip line
-            $configContent = preg_replace('/^#\s+\d+\.\d+\.\d+\.\d+.*$/m', '', $configContent);
-            if (!empty($comments)) {
-                $configContent = preg_replace(
-                    '/^(ignoreip\s*=.*)$/m',
-                    '$1' . "\n" . implode("\n", $comments),
-                    $configContent
-                );
-            }
-            
-            // Write updated config
-            File::put($this->jailConfig, $configContent);
-            
-            // Restart Fail2Ban to apply changes
-            $result = Process::run(['sudo', 'systemctl', 'restart', 'fail2ban']);
+            // Call the sync script via sudo
+            $result = Process::env($env)
+                ->run(['sudo', $scriptPath]);
             
             if (!$result->successful()) {
-                Log::error('Failed to restart Fail2Ban after whitelist sync', [
-                    'error' => $result->errorOutput()
+                Log::error('Failed to sync Fail2Ban whitelist', [
+                    'script_path' => $scriptPath,
+                    'exit_code' => $result->exitCode(),
+                    'error_output' => $result->errorOutput(),
+                    'output' => $result->output(),
                 ]);
                 return false;
             }
             
+            // Get count of whitelist entries for logging
+            $ipCount = Fail2banWhitelist::count();
+            
             Log::info('Fail2Ban whitelist synced successfully', [
-                'ip_count' => count($ips),
-                'user' => auth()->id()
+                'script_path' => $scriptPath,
+                'ip_count' => $ipCount,
+                'user' => auth()->id(),
+                'output' => $result->output(),
             ]);
             
             return true;
