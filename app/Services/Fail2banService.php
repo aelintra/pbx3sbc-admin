@@ -71,10 +71,19 @@ class Fail2banService
         }
         
         $output = $result->output();
-        Log::debug('Fail2ban status output', ['output' => $output]);
+        Log::info('Fail2ban status command succeeded', [
+            'output' => $output,
+            'exit_code' => $result->exitCode(),
+        ]);
         
         $status = $this->parseStatus($output);
         $status['service_running'] = true;
+        
+        Log::info('Parsed Fail2ban status', [
+            'enabled' => $status['enabled'],
+            'currently_banned' => $status['currently_banned'],
+            'total_banned' => $status['total_banned'],
+        ]);
         
         return $status;
     }
@@ -191,13 +200,13 @@ class Fail2banService
             'banned_ips' => [],
         ];
         
-        // Extract banned IPs
+        // Extract banned IPs (handle empty list)
         if (preg_match('/Banned IP list:\s*(.+)/', $output, $matches)) {
             $ips = trim($matches[1]);
-            $status['banned_ips'] = $ips ? explode(' ', $ips) : [];
+            $status['banned_ips'] = $ips ? preg_split('/\s+/', $ips) : [];
         }
         
-        // Extract counts
+        // Extract counts (handle both tabs and spaces)
         if (preg_match('/Currently banned:\s*(\d+)/', $output, $matches)) {
             $status['currently_banned'] = (int)$matches[1];
         }
@@ -216,7 +225,7 @@ class Fail2banService
         
         // Check if enabled (jail exists and has status)
         // If fail2ban-client status succeeds, the jail exists and is enabled
-        // Look for status indicators in the output
+        // Look for status indicators in the output - if command succeeded, jail is enabled
         $hasStatusHeader = (
             stripos($output, 'Status for the jail') !== false ||
             stripos($output, 'Filter') !== false ||
@@ -226,7 +235,8 @@ class Fail2banService
         );
         
         // Jail is enabled if we see status indicators (command succeeded = jail exists)
-        $status['enabled'] = $hasStatusHeader;
+        // Default to true if we got valid output (command wouldn't succeed if jail didn't exist)
+        $status['enabled'] = $hasStatusHeader || !empty($output);
         
         return $status;
     }
