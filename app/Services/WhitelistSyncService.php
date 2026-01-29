@@ -59,17 +59,16 @@ class WhitelistSyncService
             $dbUser = config('database.connections.mysql.username');
             $dbPass = config('database.connections.mysql.password');
             
-            // Prepare environment variables for the script
-            $env = [
-                'DB_NAME' => $dbName,
-                'DB_USER' => $dbUser,
-                'DB_PASS' => $dbPass,
-            ];
-            
-            // Call the sync script via sudo with environment preservation
-            // Use sudo -E to preserve environment variables (DB_NAME, DB_USER, DB_PASS)
-            $result = Process::env($env)
-                ->run(['sudo', '-E', $scriptPath]);
+            // Call the sync script via sudo with credentials as command-line arguments
+            // This is more reliable than environment variables with sudo
+            // Arguments: script_path DB_NAME DB_USER DB_PASS
+            $result = Process::run([
+                'sudo',
+                $scriptPath,
+                $dbName,
+                $dbUser,
+                $dbPass
+            ]);
             
             if (!$result->successful()) {
                 Log::error('Failed to sync Fail2Ban whitelist', [
