@@ -40,6 +40,16 @@ class Fail2banStatus extends Page
                 return $this->fail2banService->getStatus();
             });
             $this->bannedIPs = $this->status['banned_ips'] ?? [];
+            
+            // Show notification if service is not running
+            if (isset($this->status['error'])) {
+                Notification::make()
+                    ->title('Fail2ban Service Not Running')
+                    ->body($this->status['error'])
+                    ->warning()
+                    ->persistent()
+                    ->send();
+            }
         } catch (\Exception $e) {
             Notification::make()
                 ->title('Failed to load Fail2Ban status')
@@ -49,8 +59,10 @@ class Fail2banStatus extends Page
             
             $this->status = [
                 'enabled' => false,
+                'service_running' => false,
                 'currently_banned' => 0,
                 'banned_ips' => [],
+                'error' => $e->getMessage(),
             ];
             $this->bannedIPs = [];
         }

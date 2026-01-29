@@ -10,25 +10,73 @@ class Fail2banService
     protected string $jailName = 'opensips-brute-force';
     
     /**
+     * Check if Fail2ban service is running
+     */
+    public function isServiceRunning(): bool
+    {
+        $result = Process::run(['sudo', 'systemctl', 'is-active', 'fail2ban']);
+        return $result->successful() && trim($result->output()) === 'active';
+    }
+    
+    /**
      * Get jail status
      */
     public function getStatus(): array
     {
+        // First check if Fail2ban service is running
+        if (!$this->isServiceRunning()) {
+            Log::warning('Fail2ban service is not running');
+            return [
+                'jail_name' => $this->jailName,
+                'enabled' => false,
+                'service_running' => false,
+                'currently_failed' => 0,
+                'total_failed' => 0,
+                'currently_banned' => 0,
+                'total_banned' => 0,
+                'banned_ips' => [],
+                'error' => 'Fail2ban service is not running. Start it with: sudo systemctl start fail2ban',
+            ];
+        }
+        
         $result = Process::run(['sudo', 'fail2ban-client', 'status', $this->jailName]);
         
         if (!$result->successful()) {
+            $errorOutput = $result->errorOutput();
+            $output = $result->output();
+            
             Log::error('Fail2ban status command failed', [
                 'exit_code' => $result->exitCode(),
-                'error_output' => $result->errorOutput(),
-                'output' => $result->output(),
+                'error_output' => $errorOutput,
+                'output' => $output,
             ]);
-            throw new \Exception('Failed to get Fail2Ban status: ' . $result->errorOutput());
+            
+            // Check if it's a socket error (service not running)
+            if (strpos($errorOutput, 'Failed to access socket') !== false || 
+                strpos($errorOutput, 'Is fail2ban running') !== false) {
+                return [
+                    'jail_name' => $this->jailName,
+                    'enabled' => false,
+                    'service_running' => false,
+                    'currently_failed' => 0,
+                    'total_failed' => 0,
+                    'currently_banned' => 0,
+                    'total_banned' => 0,
+                    'banned_ips' => [],
+                    'error' => 'Fail2ban service is not running. Start it with: sudo systemctl start fail2ban',
+                ];
+            }
+            
+            throw new \Exception('Failed to get Fail2Ban status: ' . $errorOutput);
         }
         
         $output = $result->output();
         Log::debug('Fail2ban status output', ['output' => $output]);
         
-        return $this->parseStatus($output);
+        $status = $this->parseStatus($output);
+        $status['service_running'] = true;
+        
+        return $status;
     }
     
     /**

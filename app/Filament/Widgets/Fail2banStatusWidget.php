@@ -38,6 +38,18 @@ class Fail2banStatusWidget extends BaseWidget
             
             $bannedCount = $status['currently_banned'] ?? 0;
             $isEnabled = $status['enabled'] ?? false;
+            $serviceRunning = $status['service_running'] ?? true;
+            
+            // If service is not running, show that instead of enabled/disabled
+            if (!$serviceRunning) {
+                return [
+                    Stat::make('Fail2ban Status', 'Service Not Running')
+                        ->description('Start Fail2ban service to enable monitoring')
+                        ->descriptionIcon('heroicon-m-exclamation-triangle')
+                        ->color('danger')
+                        ->url(route('filament.admin.pages.fail2ban-status')),
+                ];
+            }
             
             return [
                 Stat::make('Fail2ban Status', $isEnabled ? 'Enabled' : 'Disabled')
