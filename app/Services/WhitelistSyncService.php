@@ -66,9 +66,10 @@ class WhitelistSyncService
                 'DB_PASS' => $dbPass,
             ];
             
-            // Call the sync script via sudo
+            // Call the sync script via sudo with environment preservation
+            // Use sudo -E to preserve environment variables (DB_NAME, DB_USER, DB_PASS)
             $result = Process::env($env)
-                ->run(['sudo', $scriptPath]);
+                ->run(['sudo', '-E', $scriptPath]);
             
             if (!$result->successful()) {
                 Log::error('Failed to sync Fail2Ban whitelist', [
