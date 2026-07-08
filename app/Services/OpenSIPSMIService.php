@@ -76,7 +76,12 @@ class OpenSIPSMIService
     public function dispatcherReload(): void
     {
         try {
-            $this->call('dispatcher_reload');
+            // OpenSIPS 3.6 uses ds_reload; 4.x renamed to dispatcher_reload
+            try {
+                $this->call('ds_reload');
+            } catch (\Exception $e) {
+                $this->call('dispatcher_reload');
+            }
             Log::info('OpenSIPS dispatcher module reloaded successfully');
         } catch (\Exception $e) {
             // Log but don't throw - MI might not be available

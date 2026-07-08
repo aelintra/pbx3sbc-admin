@@ -1128,16 +1128,15 @@ setup_environment() {
         log_success "Database configuration updated"
     fi
     
-    # Configure OpenSIPS MI URL if provided
-    if [[ -n "$OPENSIPS_MI_URL" ]]; then
-        log_info "Configuring OpenSIPS MI URL..."
-        if [[ "$(uname)" == "Darwin" ]]; then
-            sed -i '' "s|^OPENSIPS_MI_URL=.*|OPENSIPS_MI_URL=${OPENSIPS_MI_URL}|" "$ENV_FILE" 2>/dev/null || echo "OPENSIPS_MI_URL=${OPENSIPS_MI_URL}" >> "$ENV_FILE"
-        else
-            sed -i "s|^OPENSIPS_MI_URL=.*|OPENSIPS_MI_URL=${OPENSIPS_MI_URL}|" "$ENV_FILE" 2>/dev/null || echo "OPENSIPS_MI_URL=${OPENSIPS_MI_URL}" >> "$ENV_FILE"
-        fi
-        log_success "OpenSIPS MI URL configured"
+    # Configure OpenSIPS MI URL (default for co-located admin + OpenSIPS install)
+    local mi_url="${OPENSIPS_MI_URL:-http://127.0.0.1:8888/mi}"
+    log_info "Configuring OpenSIPS MI URL..."
+    if [[ "$(uname)" == "Darwin" ]]; then
+        sed -i '' "s|^OPENSIPS_MI_URL=.*|OPENSIPS_MI_URL=${mi_url}|" "$ENV_FILE" 2>/dev/null || echo "OPENSIPS_MI_URL=${mi_url}" >> "$ENV_FILE"
+    else
+        sed -i "s|^OPENSIPS_MI_URL=.*|OPENSIPS_MI_URL=${mi_url}|" "$ENV_FILE" 2>/dev/null || echo "OPENSIPS_MI_URL=${mi_url}" >> "$ENV_FILE"
     fi
+    log_success "OpenSIPS MI URL configured: ${mi_url}"
 }
 
 test_database_connection() {
