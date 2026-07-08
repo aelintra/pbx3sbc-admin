@@ -199,93 +199,98 @@ check_root_access() {
     fi
 }
 
+php_version_meets_minimum() {
+    local php_version php_major php_minor
+    php_version=$(php -r 'echo PHP_VERSION;' | cut -d. -f1,2)
+    php_major=$(echo "$php_version" | cut -d. -f1)
+    php_minor=$(echo "$php_version" | cut -d. -f2)
+    [[ $php_major -gt 8 ]] || [[ $php_major -eq 8 && $php_minor -ge 4 ]]
+}
+
+ensure_ondrej_php_ppa() {
+    if [[ "$PKG_MANAGER" != "apt" ]]; then
+        return 0
+    fi
+
+    if apt-cache show php8.4-cli &>/dev/null; then
+        return 0
+    fi
+
+    log_info "PHP 8.4 is not in default Ubuntu repos; adding ppa:ondrej/php..."
+    if ! command -v add-apt-repository &>/dev/null; then
+        $PKG_INSTALL software-properties-common
+    fi
+    sudo add-apt-repository -y ppa:ondrej/php
+    $PKG_UPDATE
+}
+
+set_php_cli_default() {
+    local php_version php_major php_minor php_bin
+    php_version=$(php -r 'echo PHP_VERSION;' 2>/dev/null | cut -d. -f1,2 || echo "")
+    php_major=$(echo "$php_version" | cut -d. -f1)
+    php_minor=$(echo "$php_version" | cut -d. -f2)
+    php_bin="/usr/bin/php${php_major}.${php_minor}"
+
+    if command -v update-alternatives &>/dev/null && [[ -x "$php_bin" ]]; then
+        sudo update-alternatives --set php "$php_bin" 2>/dev/null || true
+    fi
+}
+
 install_php() {
     log_info "Checking PHP installation..."
-    
+
+    if command -v php &> /dev/null && php_version_meets_minimum; then
+        PHP_VERSION=$(php -r 'echo PHP_VERSION;' | cut -d. -f1,2)
+        log_success "PHP $PHP_VERSION is installed"
+        return 0
+    fi
+
     if command -v php &> /dev/null; then
         PHP_VERSION=$(php -r 'echo PHP_VERSION;' | cut -d. -f1,2)
-        PHP_MAJOR=$(echo "$PHP_VERSION" | cut -d. -f1)
-        PHP_MINOR=$(echo "$PHP_VERSION" | cut -d. -f2)
-        
-        if [[ $PHP_MAJOR -lt 8 ]] || [[ $PHP_MAJOR -eq 8 && $PHP_MINOR -lt 2 ]]; then
-            log_warn "PHP version $PHP_VERSION is too old. PHP 8.2+ required."
-            log_info "Attempting to install PHP 8.2+..."
-        else
-            log_success "PHP $PHP_VERSION is installed"
-            return 0
-        fi
+        log_warn "PHP $PHP_VERSION is installed but 8.4+ is required (composer.lock / Symfony 8)"
+        log_info "Installing PHP 8.4..."
     else
-        log_info "PHP is not installed. Installing PHP 8.2+..."
+        log_info "PHP is not installed. Installing PHP 8.4..."
     fi
-    
+
     if [[ "$PKG_MANAGER" == "apt" ]]; then
-        # Ubuntu/Debian
         log_info "Updating package lists..."
         $PKG_UPDATE
-        
-        # Detect Ubuntu version to prioritize PHP version
-        # Ubuntu 24.04 ships with PHP 8.3, Ubuntu 22.04 with PHP 8.1/8.2
-        if [[ -f /etc/os-release ]]; then
-            . /etc/os-release
-            if [[ "$VERSION_ID" == "24.04" ]] || [[ "$VERSION_ID" == "24.10" ]]; then
-                PHP_PRIORITY_VERSION="8.3"
-            elif [[ "$VERSION_ID" == "22.04" ]]; then
-                PHP_PRIORITY_VERSION="8.2"
-            else
-                PHP_PRIORITY_VERSION="8.2"
-            fi
-        else
-            PHP_PRIORITY_VERSION="8.2"
+
+        ensure_ondrej_php_ppa
+
+        log_info "Attempting to install PHP 8.4..."
+        if ! $PKG_INSTALL php8.4-cli php8.4-common php8.4-readline; then
+            log_error "Failed to install PHP 8.4."
+            log_error "composer.lock requires PHP 8.4+. Install manually, then re-run this installer."
+            exit 1
         fi
-        
-        # Try to install priority version first, then fall back
-        log_info "Attempting to install PHP ${PHP_PRIORITY_VERSION}..."
-        if $PKG_INSTALL php${PHP_PRIORITY_VERSION}-cli php${PHP_PRIORITY_VERSION}-common 2>&1 >/dev/null; then
-            log_success "PHP ${PHP_PRIORITY_VERSION} installed"
-        else
-            # Try PHP 8.2
-            log_info "PHP ${PHP_PRIORITY_VERSION} not available, trying PHP 8.2..."
-            if $PKG_INSTALL php8.2-cli php8.2-common 2>&1 >/dev/null; then
-                log_success "PHP 8.2 installed"
-            else
-                # Try PHP 8.1
-                log_info "PHP 8.2 not available, trying PHP 8.1..."
-                if $PKG_INSTALL php8.1-cli php8.1-common 2>&1 >/dev/null; then
-                    log_success "PHP 8.1 installed"
-                else
-                    # Install default PHP version
-                    log_info "Installing default PHP version..."
-                    $PKG_INSTALL php-cli php-common
-                fi
-            fi
-        fi
+        log_success "PHP 8.4 installed"
     elif [[ "$PKG_MANAGER" == "yum" ]] || [[ "$PKG_MANAGER" == "dnf" ]]; then
-        # RHEL/CentOS/Fedora
         log_info "Installing PHP..."
         $PKG_INSTALL php php-cli php-common
         log_success "PHP installed"
     else
         log_error "Unable to automatically install PHP. Unknown package manager."
-        log_error "Please install PHP 8.2+ manually and run the installer again."
+        log_error "Please install PHP 8.4+ manually and run the installer again."
         exit 1
     fi
-    
-    # Verify installation
+
+    set_php_cli_default
+
     if ! command -v php &> /dev/null; then
         log_error "PHP installation failed"
         exit 1
     fi
-    
-    PHP_VERSION=$(php -r 'echo PHP_VERSION;' | cut -d. -f1,2)
-    PHP_MAJOR=$(echo "$PHP_VERSION" | cut -d. -f1)
-    PHP_MINOR=$(echo "$PHP_VERSION" | cut -d. -f2)
-    
-    if [[ $PHP_MAJOR -lt 8 ]] || [[ $PHP_MAJOR -eq 8 && $PHP_MINOR -lt 2 ]]; then
-        log_error "Installed PHP version $PHP_VERSION is too old. PHP 8.2+ required."
-        log_error "Please install PHP 8.2+ manually and run the installer again."
+
+    if ! php_version_meets_minimum; then
+        PHP_VERSION=$(php -r 'echo PHP_VERSION;' | cut -d. -f1,2)
+        log_error "Installed PHP version $PHP_VERSION is too old. PHP 8.4+ required."
+        log_error "Please install PHP 8.4+ manually and run the installer again."
         exit 1
     fi
-    
+
+    PHP_VERSION=$(php -r 'echo PHP_VERSION;' | cut -d. -f1,2)
     log_success "PHP $PHP_VERSION is ready"
 }
 
@@ -379,8 +384,8 @@ install_php_extensions() {
             if ! $PKG_INSTALL "${UNIQUE_PACKAGES[@]}"; then
                 log_error "Failed to install PHP extension packages"
                 log_error ""
-                log_error "Please install manually on Ubuntu 24.04:"
-                log_error "  sudo apt-get update"
+                log_error "Please install manually on Ubuntu (PHP 8.4 via ppa:ondrej/php):"
+                log_error "  sudo add-apt-repository -y ppa:ondrej/php && sudo apt-get update"
                 log_error "  sudo apt-get install -y ${UNIQUE_PACKAGES[*]}"
                 log_error ""
                 log_error "Or if the version-specific packages don't exist, try:"
