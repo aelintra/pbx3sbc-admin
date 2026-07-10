@@ -90,6 +90,19 @@ class OpenSIPSMIService
     }
 
     /**
+     * Reload drouting module (dr_gateways / dr_rules)
+     */
+    public function drReload(): void
+    {
+        try {
+            $this->call('dr_reload');
+            Log::info('OpenSIPS drouting module reloaded successfully');
+        } catch (\Exception $e) {
+            Log::warning('OpenSIPS drouting reload failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * Set dispatcher destination state
      */
     public function dispatcherSetState(int $setid, string $destination, int $state): void
