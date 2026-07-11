@@ -115,16 +115,26 @@
     @apply !text-gray-400;
 }
 
-/* Kill Filament card divide-y gap between search toolbar and column headers */
+/* Kill Filament card divide-y gap between search toolbar and column headers.
+ * SPA heading row has no top boundary — only bottom hairlines on cells. */
 .fi-ta-ctn.divide-y > :not([hidden]) ~ :not([hidden]) {
     border-top-width: 0 !important;
 }
 
 .fi-ta-header-toolbar {
-    border-bottom: 1px solid #e2e8f0 !important;
+    border-bottom-width: 0 !important;
 }
 
 .fi-ta-content {
+    border-top-width: 0 !important;
+}
+
+.fi-ta-table {
+    border-top-width: 0 !important;
+}
+
+.fi-ta-table > thead,
+.fi-ta-table > thead > tr {
     border-top-width: 0 !important;
 }
 
