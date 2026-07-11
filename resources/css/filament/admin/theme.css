@@ -1,0 +1,55 @@
+/**
+ * PBX3 SBC Admin — Filament theme aligned with pbx3spa shell tokens.
+ * Compile: npm run build:filament-theme
+ * Light: slate canvas / subtle sidebar / blue accent. Dark mode kept.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;
+
+@import '../../../../vendor/filament/filament/resources/css/base.css';
+
+/* --- Light mode: SPA kinship surfaces --- */
+.fi-body {
+    @apply bg-gray-50;
+}
+
+.fi-sidebar {
+    @apply !bg-gray-100;
+}
+
+.fi-sidebar-header {
+    @apply !bg-gray-100;
+}
+
+.fi-topbar {
+    @apply !bg-white;
+}
+
+.fi-main,
+.fi-main-ctn {
+    @apply bg-gray-50;
+}
+
+.fi-sidebar-item-active .fi-sidebar-item-button {
+    @apply !bg-primary-500/10;
+}
+
+.fi-sidebar-item-active .fi-sidebar-item-button .fi-sidebar-item-label,
+.fi-sidebar-item-active .fi-sidebar-item-button .fi-sidebar-item-icon {
+    @apply !text-primary-600;
+}
+
+.fi-ta-header-cell {
+    @apply text-gray-600;
+}
+
+.dark .fi-sidebar-item-active .fi-sidebar-item-button {
+    @apply !bg-primary-400/15;
+}
+
+.dark .fi-sidebar-item-active .fi-sidebar-item-button .fi-sidebar-item-label,
+.dark .fi-sidebar-item-active .fi-sidebar-item-button .fi-sidebar-item-icon {
+    @apply !text-primary-400;
+}

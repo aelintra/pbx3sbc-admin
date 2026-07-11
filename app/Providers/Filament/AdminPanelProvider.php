@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -28,10 +29,15 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->profile(isSimple: false)
-            ->brandName('PBX3SBC')
+            // Match pbx3spa shell: slate surfaces + blue #2563eb accent (STYLESYNC / SPA --pbx-*)
+            ->brandName('PBX3 SBC')
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => '#2563eb',
+                'danger' => '#dc2626',
+                'gray' => Color::Slate,
             ])
+            ->defaultThemeMode(ThemeMode::Light)
+            ->theme(asset('css/filament/admin/theme.css'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
