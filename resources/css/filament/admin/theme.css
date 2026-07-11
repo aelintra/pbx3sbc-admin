@@ -36,19 +36,27 @@
     @apply bg-gray-50;
 }
 
-/* Table card + rows: white like SPA list body (page chrome stays slate) */
+/* SPA: list rows share the panel canvas (no raised white table card) */
 .fi-ta-ctn {
-    background-color: #ffffff !important;
+    background-color: #f8fafc !important;
+    box-shadow: none !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+    @apply !shadow-none !ring-0;
 }
 
+.fi-ta-table > thead > tr,
 .fi-ta-table > tbody > tr,
-.fi-ta-table > tbody > tr > td {
-    background-color: #ffffff !important;
+.fi-ta-table > tbody > tr > td,
+.fi-ta-header-toolbar {
+    background-color: #f8fafc !important;
 }
 
 .dark .fi-ta-ctn,
+.dark .fi-ta-table > thead > tr,
 .dark .fi-ta-table > tbody > tr,
-.dark .fi-ta-table > tbody > tr > td {
+.dark .fi-ta-table > tbody > tr > td,
+.dark .fi-ta-header-toolbar {
     @apply !bg-gray-900;
 }
 
@@ -65,15 +73,7 @@
     @apply text-gray-600;
 }
 
-/* SPA lists: white header row (no slate band), muted labels, single hairline — no blank strip above th */
-.fi-ta-table > thead > tr {
-    background-color: #ffffff !important;
-}
-
-.dark .fi-ta-table > thead > tr {
-    @apply !bg-gray-900;
-}
-
+/* SPA lists: muted labels; no blank strip above th (row/header share canvas above) */
 .fi-ta-header-cell {
     padding-top: 0.5rem !important;
     padding-bottom: 0.5rem !important;
