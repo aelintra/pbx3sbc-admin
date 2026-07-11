@@ -51,7 +51,8 @@
 
 /*
  * SPA kinship: brand lives in the main topbar (see topbar-brand hook), not the sidebar.
- * Hide Filament’s sidebar logo; drop the empty header strip on desktop so nav starts at top.
+ * Keep the sidebar header as an empty h-16 spacer (SPA .sidebar-top-spacer) so nav
+ * starts at the same vertical position; only hide the logo text.
  */
 .fi-sidebar-header .fi-logo {
     @apply !hidden;
@@ -61,10 +62,12 @@
     @apply !hidden;
 }
 
-@media (min-width: 1024px) {
-    .fi-sidebar-header {
-        @apply !hidden;
-    }
+.fi-sidebar-header {
+    @apply !bg-gray-100 !shadow-none;
+}
+
+.dark .fi-sidebar-header {
+    @apply !bg-gray-900;
 }
 
 .dark .fi-sidebar-item-active .fi-sidebar-item-button {
