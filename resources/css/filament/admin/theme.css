@@ -70,6 +70,24 @@
     @apply !bg-gray-900;
 }
 
+/* SPA nav-link uses ~0.45rem vertical pad + loose row rhythm; Filament default is tighter */
+.fi-sidebar-item-button {
+    @apply !py-2.5 !px-2.5;
+}
+
+.fi-sidebar-group-button {
+    @apply !py-2.5;
+}
+
+.fi-sidebar-group,
+.fi-sidebar-group-items {
+    @apply !gap-y-1.5;
+}
+
+.fi-sidebar-nav-groups {
+    @apply !gap-y-5;
+}
+
 .dark .fi-sidebar-item-active .fi-sidebar-item-button {
     @apply !bg-primary-400/15;
 }
