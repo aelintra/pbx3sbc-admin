@@ -24,7 +24,11 @@
 }
 
 .fi-topbar {
-    @apply !bg-white;
+    @apply !bg-gray-50;
+}
+
+.fi-topbar > nav {
+    @apply !bg-gray-50 !shadow-none;
 }
 
 .fi-main,
