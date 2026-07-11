@@ -36,6 +36,22 @@
     @apply bg-gray-50;
 }
 
+/* Table card + rows: white like SPA list body (page chrome stays slate) */
+.fi-ta-ctn {
+    background-color: #ffffff !important;
+}
+
+.fi-ta-table > tbody > tr,
+.fi-ta-table > tbody > tr > td {
+    background-color: #ffffff !important;
+}
+
+.dark .fi-ta-ctn,
+.dark .fi-ta-table > tbody > tr,
+.dark .fi-ta-table > tbody > tr > td {
+    @apply !bg-gray-900;
+}
+
 .fi-sidebar-item-active .fi-sidebar-item-button {
     @apply !bg-primary-500/10;
 }
