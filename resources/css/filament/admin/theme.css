@@ -49,18 +49,19 @@
     @apply text-gray-600;
 }
 
-/* SPA list th: background #f8fafc, color #475569 — not a heavy gray band + black labels */
+/* SPA lists: white header row (no slate band), muted labels, single hairline — no blank strip above th */
 .fi-ta-table > thead > tr {
-    background-color: #f8fafc !important;
+    background-color: #ffffff !important;
 }
 
 .dark .fi-ta-table > thead > tr {
-    @apply !bg-white/5;
+    @apply !bg-gray-900;
 }
 
 .fi-ta-header-cell {
     padding-top: 0.5rem !important;
     padding-bottom: 0.5rem !important;
+    border-bottom: 1px solid #e2e8f0 !important;
 }
 
 .fi-ta-header-cell-label {
@@ -71,6 +72,19 @@
 
 .dark .fi-ta-header-cell-label {
     @apply !text-gray-400;
+}
+
+/* Kill Filament card divide-y gap between search toolbar and column headers */
+.fi-ta-ctn.divide-y > :not([hidden]) ~ :not([hidden]) {
+    border-top-width: 0 !important;
+}
+
+.fi-ta-header-toolbar {
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.fi-ta-content {
+    border-top-width: 0 !important;
 }
 
 /*
