@@ -40,6 +40,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->defaultThemeMode(ThemeMode::Light)
             ->theme(asset('css/filament/admin/theme.css'))
+            ->sidebarWidth('15.75rem') // match pbx3spa --pbx-shell-sidebar-width
             // SPA: brand in main topbar-left (not sidebar). Hide sidebar logo via theme.css.
             ->renderHook(
                 PanelsRenderHook::TOPBAR_START,
