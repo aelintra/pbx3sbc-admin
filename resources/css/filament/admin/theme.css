@@ -49,6 +49,30 @@
     @apply text-gray-600;
 }
 
+/* SPA list th: background #f8fafc, color #475569 — not a heavy gray band + black labels */
+.fi-ta-table > thead > tr {
+    background-color: #f8fafc !important;
+}
+
+.dark .fi-ta-table > thead > tr {
+    @apply !bg-white/5;
+}
+
+.fi-ta-header-cell {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+.fi-ta-header-cell-label {
+    color: #475569 !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+}
+
+.dark .fi-ta-header-cell-label {
+    @apply !text-gray-400;
+}
+
 /*
  * SPA kinship: brand in main topbar only.
  * Hide Filament sidebar header entirely; pad the nav top to match SPA
