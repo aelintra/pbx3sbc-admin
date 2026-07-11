@@ -73,11 +73,30 @@
     @apply text-gray-600;
 }
 
-/* SPA lists: muted labels; no blank strip above th (row/header share canvas above) */
+/* SPA .table td: padding 0.5rem 0.75rem — Filament columns use py-4 */
 .fi-ta-header-cell {
     padding-top: 0.5rem !important;
     padding-bottom: 0.5rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
     border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.fi-ta-text,
+.fi-ta-icon,
+.fi-ta-color,
+.fi-ta-image,
+.fi-ta-checkbox,
+.fi-ta-toggle,
+.fi-ta-select,
+.fi-ta-text-input,
+.fi-ta-cell > div,
+.fi-ta-actions-cell > div,
+.fi-ta-selection-cell > div {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
 }
 
 .fi-ta-header-cell-label {
