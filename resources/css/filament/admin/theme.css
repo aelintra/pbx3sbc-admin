@@ -73,30 +73,36 @@
     @apply text-gray-600;
 }
 
-/* SPA .table td: padding 0.5rem 0.75rem — Filament columns use py-4 */
+/* SPA .table td: 0.5rem — Filament still reads taller; nudge under SPA + kill grid gap */
 .fi-ta-header-cell {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
+    padding-top: 0.375rem !important;
+    padding-bottom: 0.375rem !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
     border-bottom: 1px solid #e2e8f0 !important;
 }
 
-.fi-ta-text,
-.fi-ta-icon,
-.fi-ta-color,
-.fi-ta-image,
-.fi-ta-checkbox,
-.fi-ta-toggle,
-.fi-ta-select,
-.fi-ta-text-input,
-.fi-ta-cell > div,
-.fi-ta-actions-cell > div,
-.fi-ta-selection-cell > div {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
+.fi-ta-table .fi-ta-text,
+.fi-ta-table .fi-ta-icon,
+.fi-ta-table .fi-ta-color,
+.fi-ta-table .fi-ta-image,
+.fi-ta-table .fi-ta-checkbox,
+.fi-ta-table .fi-ta-toggle,
+.fi-ta-table .fi-ta-select,
+.fi-ta-table .fi-ta-text-input,
+.fi-ta-table .fi-ta-actions-cell > div,
+.fi-ta-table .fi-ta-selection-cell > div {
+    padding-top: 0.375rem !important;
+    padding-bottom: 0.375rem !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
+    gap: 0 !important;
+    line-height: 1.35 !important;
+}
+
+.fi-ta-table .fi-ta-text-item,
+.fi-ta-table .fi-ta-text-item-label {
+    line-height: 1.35 !important;
 }
 
 .fi-ta-header-cell-label {
