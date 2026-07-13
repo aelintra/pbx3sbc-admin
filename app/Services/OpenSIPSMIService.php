@@ -103,6 +103,19 @@ class OpenSIPSMIService
     }
 
     /**
+     * Reload uac_registrant module (registrant table)
+     */
+    public function regReload(): void
+    {
+        try {
+            $this->call('reg_reload');
+            Log::info('OpenSIPS uac_registrant module reloaded successfully');
+        } catch (\Exception $e) {
+            Log::warning('OpenSIPS registrant reload failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * Set dispatcher destination state
      */
     public function dispatcherSetState(int $setid, string $destination, int $state): void
