@@ -3,7 +3,10 @@
 # PBX3SBC Admin Panel Installation Script
 # Installs and configures Laravel + Filament admin panel
 #
-# Usage: ./install.sh [--skip-deps] [--skip-prereqs] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user] [--admin-name NAME] [--admin-email EMAIL] [--admin-password PASSWORD] [--opensips-mi-url URL]
+# Usage: ./install.sh [--skip-deps] [--skip-prereqs] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user] [--admin-name NAME] [--admin-email EMAIL] [--admin-password PASSWORD] [--opensips-mi-url URL] [--server-name FQDN]
+#
+# HTTPS (production): after HTTP install, follow pbx3sbc/workingdocs/LE_HTTPS_SBC_ADMIN.md
+# and deploy/nginx-pbx3sbc-admin.conf. Pass --server-name sbc.pbx3.com (not EC2 internal hostname).
 #
 
 set -euo pipefail
@@ -33,6 +36,7 @@ OPENSIPS_MI_URL=""
 ADMIN_NAME=""
 ADMIN_EMAIL=""
 ADMIN_PASSWORD=""
+NGINX_SERVER_NAME=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -125,9 +129,17 @@ while [[ $# -gt 0 ]]; do
             ADMIN_PASSWORD="$2"
             shift 2
             ;;
+        --server-name)
+            if [[ -z "${2:-}" ]]; then
+                echo -e "${RED}Error: --server-name requires a hostname (e.g. sbc.pbx3.com)${NC}"
+                exit 1
+            fi
+            NGINX_SERVER_NAME="$2"
+            shift 2
+            ;;
         *)
             echo -e "${RED}Unknown option: $1${NC}"
-            echo "Usage: $0 [--skip-deps] [--skip-prereqs] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user] [--opensips-mi-url URL] [--admin-name NAME] [--admin-email EMAIL] [--admin-password PASSWORD]"
+            echo "Usage: $0 [--skip-deps] [--skip-prereqs] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user] [--opensips-mi-url URL] [--admin-name NAME] [--admin-email EMAIL] [--admin-password PASSWORD] [--server-name FQDN]"
             exit 1
             ;;
     esac
@@ -696,8 +708,13 @@ configure_nginx() {
         log_warn "You may need to update the nginx config if this is incorrect"
     fi
     
-    # Determine server name (try to get hostname or use localhost)
-    SERVER_NAME=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
+    # Prefer explicit FQDN (--server-name sbc.pbx3.com). EC2 internal hostname breaks LE/public URLs.
+    if [[ -n "${NGINX_SERVER_NAME}" ]]; then
+        SERVER_NAME="${NGINX_SERVER_NAME}"
+    else
+        SERVER_NAME=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
+        log_warn "nginx server_name defaulted to '${SERVER_NAME}' — pass --server-name <public-fqdn> for production"
+    fi
     
     # Create nginx config file
     NGINX_CONFIG="/etc/nginx/sites-available/pbx3sbc-admin"
@@ -755,6 +772,8 @@ server {
 EOF
     
     log_success "nginx configuration created at $NGINX_CONFIG"
+    log_info "For Let’s Encrypt HTTPS (production): see pbx3sbc/workingdocs/LE_HTTPS_SBC_ADMIN.md"
+    log_info "Template with TLS: ${INSTALL_DIR}/deploy/nginx-pbx3sbc-admin.conf"
     
     # Enable the site
     if [[ -d "/etc/nginx/sites-enabled" ]]; then
