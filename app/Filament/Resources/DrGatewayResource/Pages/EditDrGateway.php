@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\DrGatewayResource\Pages;
 
 use App\Filament\Resources\DrGatewayResource;
+use App\Models\DrGateway;
 use App\Services\OpenSIPSMIService;
 use Filament\Actions;
 use Filament\Notifications\Notification;
@@ -22,11 +23,35 @@ class EditDrGateway extends EditRecord
         ];
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        /** @var DrGateway $record */
+        $record = $this->getRecord();
+        $slug = $record->carrierSlug();
+        $data['carrier_label'] = $slug !== '' ? ucwords(str_replace('-', ' ', $slug)) : '';
+        $data['peer_role'] = $record->peerRole() ?: null;
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        return DrGatewayResource::applyCarrierFieldsToData($data);
+    }
+
     protected function afterSave(): void
     {
         app(OpenSIPSMIService::class)->drReload();
         Notification::make()
-            ->title('Gateway saved')
+            ->title('Peer saved')
             ->body('drouting reloaded (dr_reload).')
             ->success()
             ->send();

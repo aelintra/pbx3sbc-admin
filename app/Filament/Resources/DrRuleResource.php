@@ -10,6 +10,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class DrRuleResource extends Resource
 {
@@ -185,6 +186,21 @@ class DrRuleResource extends Resource
                         '0' => 'Outbound',
                         '1' => 'Inbound',
                     ]),
+                Tables\Filters\SelectFilter::make('peer')
+                    ->label('Peer')
+                    ->options(fn () => DrGateway::optionsForSelect())
+                    ->searchable()
+                    ->query(function (Builder $query, array $data): Builder {
+                        $gwid = $data['value'] ?? null;
+                        if ($gwid === null || $gwid === '') {
+                            return $query;
+                        }
+
+                        return $query->whereRaw(
+                            "FIND_IN_SET(?, REPLACE(gwlist, ' ', ''))",
+                            [(string) $gwid]
+                        );
+                    }),
             ])
             ->defaultSort('ruleid')
             ->actions([

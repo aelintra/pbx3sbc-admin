@@ -13,11 +13,20 @@ class CreateDrGateway extends CreateRecord
 
     protected static bool $canCreateAnother = false;
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        return DrGatewayResource::applyCarrierFieldsToData($data);
+    }
+
     protected function afterCreate(): void
     {
         app(OpenSIPSMIService::class)->drReload();
         Notification::make()
-            ->title('Gateway created')
+            ->title('Peer created')
             ->body('drouting reloaded (dr_reload).')
             ->success()
             ->send();
