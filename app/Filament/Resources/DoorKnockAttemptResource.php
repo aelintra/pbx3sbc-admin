@@ -22,11 +22,13 @@ class DoorKnockAttemptResource extends Resource
 
     protected static ?string $navigationLabel = 'Door-Knock Attempts';
 
+    protected static ?string $navigationGroup = 'Logs';
+
     protected static ?string $modelLabel = 'Door-Knock Attempt';
 
     protected static ?string $pluralModelLabel = 'Door-Knock Attempts';
 
-    protected static ?int $navigationSort = 11;
+    protected static ?int $navigationSort = 30;
 
     public static function form(Form $form): Form
     {

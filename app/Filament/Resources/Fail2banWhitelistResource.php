@@ -20,7 +20,9 @@ class Fail2banWhitelistResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static ?string $navigationLabel = 'Fail2Ban Whitelist';
+    protected static ?string $navigationLabel = 'Whitelist';
+
+    protected static ?string $navigationGroup = 'Fail2Ban';
 
     protected static ?string $modelLabel = 'Whitelist Entry';
 

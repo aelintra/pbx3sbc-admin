@@ -22,11 +22,13 @@ class FailedRegistrationResource extends Resource
 
     protected static ?string $navigationLabel = 'Failed Registrations';
 
+    protected static ?string $navigationGroup = 'Logs';
+
     protected static ?string $modelLabel = 'Failed Registration';
 
     protected static ?string $pluralModelLabel = 'Failed Registrations';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 20;
 
     public static function form(Form $form): Form
     {

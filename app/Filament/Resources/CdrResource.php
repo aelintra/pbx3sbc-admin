@@ -22,11 +22,13 @@ class CdrResource extends Resource
 
     protected static ?string $navigationLabel = 'CDR';
 
+    protected static ?string $navigationGroup = 'Logs';
+
     protected static ?string $modelLabel = 'Call Detail Record';
 
     protected static ?string $pluralModelLabel = 'Call Detail Records';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 10;
 
     public static function form(Form $form): Form
     {

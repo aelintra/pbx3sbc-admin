@@ -22,11 +22,13 @@ class DialogResource extends Resource
 
     protected static ?string $navigationLabel = 'Active Calls';
 
+    protected static ?string $navigationGroup = 'Routing';
+
     protected static ?string $modelLabel = 'Active Call';
 
     protected static ?string $pluralModelLabel = 'Active Calls';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
     {

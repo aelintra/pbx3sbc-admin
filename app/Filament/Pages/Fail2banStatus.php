@@ -14,9 +14,11 @@ class Fail2banStatus extends Page
     
     protected static string $view = 'filament.pages.fail2ban-status';
     
-    protected static ?string $navigationLabel = 'Fail2Ban Status';
+    protected static ?string $navigationLabel = 'Status';
+
+    protected static ?string $navigationGroup = 'Fail2Ban';
     
-    protected static ?int $navigationSort = 15;
+    protected static ?int $navigationSort = 10;
     
     public array $status = [];
     public array $bannedIPs = [];
