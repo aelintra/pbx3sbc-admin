@@ -5,12 +5,15 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\DrRuleResource\Pages;
 use App\Models\DrGateway;
 use App\Models\DrRule;
+use App\Services\DrRulePrefixOverlap;
 use Filament\Forms;
+use Filament\Forms\Get;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 
 class DrRuleResource extends Resource
 {
@@ -43,12 +46,75 @@ class DrRuleResource extends Resource
                             ])
                             ->required()
                             ->native(false)
+                            ->live()
                             ->helperText('Outbound runs when Asterisk sends a long number to the SBC. Inbound runs for trusted carrier INVITEs.'),
                         Forms\Components\TextInput::make('prefix')
                             ->label('Number prefix')
                             ->maxLength(64)
                             ->placeholder('e.g. 01924918076 or leave empty')
-                            ->helperText('Longest-prefix match on the SIP user part. Empty = default / catch-all for that direction.'),
+                            ->live(onBlur: true)
+                            ->helperText('Longest-prefix match on the SIP user part. Empty = default / catch-all for that direction.')
+                            ->rules([
+                                function (Get $get, $livewire) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($get, $livewire): void {
+                                        $groupid = $get('groupid');
+                                        if ($groupid === null || $groupid === '') {
+                                            return;
+                                        }
+
+                                        $exclude = null;
+                                        if (method_exists($livewire, 'getRecord') && $livewire->getRecord()) {
+                                            $exclude = (int) $livewire->getRecord()->getKey();
+                                        }
+
+                                        $dup = DrRulePrefixOverlap::findDuplicate($groupid, is_string($value) ? $value : null, $exclude);
+                                        if ($dup !== null) {
+                                            $label = $dup->description ? " — {$dup->description}" : '';
+                                            $shown = DrRulePrefixOverlap::normalize($dup->prefix);
+                                            $shown = $shown === '' ? '(default / empty)' : "“{$shown}”";
+                                            $fail("Another route already uses this direction and prefix {$shown} (rule {$dup->ruleid}{$label}).");
+                                        }
+                                    };
+                                },
+                            ]),
+                        Forms\Components\Placeholder::make('prefix_overlap_hint')
+                            ->label('Prefix overlap')
+                            ->content(function (Get $get, $livewire): HtmlString|string {
+                                $groupid = $get('groupid');
+                                $prefix = $get('prefix');
+                                if ($groupid === null || $groupid === '') {
+                                    return '';
+                                }
+
+                                $exclude = null;
+                                if (method_exists($livewire, 'getRecord') && $livewire->getRecord()) {
+                                    $exclude = (int) $livewire->getRecord()->getKey();
+                                }
+
+                                $hint = DrRulePrefixOverlap::nestingHint($groupid, is_string($prefix) ? $prefix : null, $exclude);
+                                if ($hint === null) {
+                                    return '';
+                                }
+
+                                return new HtmlString(
+                                    '<span class="text-sm text-amber-700 dark:text-amber-400">'.e($hint).'</span>'
+                                );
+                            })
+                            ->visible(function (Get $get, $livewire): bool {
+                                $groupid = $get('groupid');
+                                $prefix = $get('prefix');
+                                if ($groupid === null || $groupid === '' || ! filled(DrRulePrefixOverlap::normalize(is_string($prefix) ? $prefix : null))) {
+                                    return false;
+                                }
+
+                                $exclude = null;
+                                if (method_exists($livewire, 'getRecord') && $livewire->getRecord()) {
+                                    $exclude = (int) $livewire->getRecord()->getKey();
+                                }
+
+                                return DrRulePrefixOverlap::nestingHint($groupid, is_string($prefix) ? $prefix : null, $exclude) !== null;
+                            })
+                            ->columnSpanFull(),
                         Forms\Components\TextInput::make('description')
                             ->label('Label')
                             ->maxLength(128)
