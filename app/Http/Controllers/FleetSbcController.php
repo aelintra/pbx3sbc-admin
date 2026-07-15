@@ -21,6 +21,50 @@ class FleetSbcController extends Controller
         ]);
     }
 
+    /**
+     * Read-only projection for catalog reconcile (S10.4).
+     * Intent: listTenantDomains — domain name → dispatcher setid.
+     */
+    public function listDomains(): JsonResponse
+    {
+        $domains = Domain::query()
+            ->orderBy('domain')
+            ->get(['domain', 'setid'])
+            ->map(static fn (Domain $d): array => [
+                'domain' => (string) $d->domain,
+                'setid' => (int) $d->setid,
+            ])
+            ->values()
+            ->all();
+
+        return response()->json([
+            'ok' => true,
+            'domains' => $domains,
+        ]);
+    }
+
+    /**
+     * Live dispatcher setids (sets with ≥1 destination) — catalog setid must be one of these.
+     */
+    public function listDispatcherSets(): JsonResponse
+    {
+        $rows = Dispatcher::query()
+            ->selectRaw('setid, COUNT(*) as destinations')
+            ->groupBy('setid')
+            ->orderBy('setid')
+            ->get();
+
+        $sets = $rows->map(static fn ($row): array => [
+            'setid' => (int) $row->setid,
+            'destinations' => (int) $row->destinations,
+        ])->values()->all();
+
+        return response()->json([
+            'ok' => true,
+            'sets' => $sets,
+        ]);
+    }
+
     public function preflight(Request $request): JsonResponse
     {
         $domainName = (string) $request->input('tenant_domain', '');
