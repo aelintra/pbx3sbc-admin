@@ -230,4 +230,46 @@ class FleetSbcController extends Controller
             'setid' => $setid,
         ]);
     }
+
+    /**
+     * S10.5 residue — provision node dispatcher set + Asterisk Peer (adapter registerNode).
+     * Body: { instance_id, backend_uri, setid?, confirm?, source_ip?, description?, dry_run? }
+     */
+    public function provisionNode(Request $request, OpenSIPSMIService $mi): JsonResponse
+    {
+        $instanceId = trim((string) $request->input('instance_id', ''));
+        $backendUri = (string) $request->input('backend_uri', '');
+        $rawSetid = $request->input('setid');
+        $setid = ($rawSetid !== null && $rawSetid !== '') ? (int) $rawSetid : null;
+        if ($setid !== null && $setid < 1) {
+            $setid = null;
+        }
+        $confirm = (bool) $request->boolean('confirm');
+        $dryRun = (bool) $request->boolean('dry_run');
+        $sourceIp = $request->input('source_ip');
+        $description = $request->input('description');
+
+        $result = \App\Services\FleetNodeProvisioner::provision(
+            $instanceId,
+            $backendUri,
+            $setid,
+            $confirm,
+            is_string($description) ? $description : null,
+            is_string($sourceIp) ? $sourceIp : null,
+            $dryRun
+        );
+
+        if (! $result['ok']) {
+            return response()->json($result, 422);
+        }
+
+        if (! $dryRun) {
+            $mi->dispatcherReload();
+            if (! empty($result['peer_created']) || ! empty($result['peer_updated'])) {
+                $mi->drReload();
+            }
+        }
+
+        return response()->json($result);
+    }
 }
