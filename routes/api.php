@@ -10,4 +10,6 @@ Route::middleware(['fleet.token'])->prefix('fleet')->group(function () {
     Route::post('preflight', [FleetSbcController::class, 'preflight']);
     Route::post('repoint', [FleetSbcController::class, 'repoint']);
     Route::post('rollback-repoint', [FleetSbcController::class, 'rollbackRepoint']);
+    Route::post('project-dids', [FleetSbcController::class, 'projectDids']);
+    Route::post('domains', [FleetSbcController::class, 'registerDomain']);
 });

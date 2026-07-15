@@ -164,4 +164,70 @@ class FleetSbcController extends Controller
             'restored_setid' => $previousSetid,
         ]);
     }
+
+    /**
+     * S10.5 — project catalog DID ownership onto inbound dr_rules (groupid 1).
+     * Body: { dids: [...], dry_run?: bool }
+     */
+    public function projectDids(Request $request, OpenSIPSMIService $mi): JsonResponse
+    {
+        $dids = $request->input('dids', []);
+        if (! is_array($dids)) {
+            return response()->json(['message' => 'dids array required'], 422);
+        }
+        $dryRun = (bool) $request->boolean('dry_run');
+        $ensure = $request->input('ensure_tenants', []);
+        if (! is_array($ensure)) {
+            $ensure = [];
+        }
+
+        $result = \App\Services\FleetDidProjector::project($dids, $dryRun, $ensure);
+        if (! $dryRun && ($result['upserted'] !== [] || $result['removed'] !== [])) {
+            $mi->drReload();
+        }
+
+        return response()->json(array_merge(['dry_run' => $dryRun], $result), $result['ok'] ? 200 : 422);
+    }
+
+    /**
+     * S10.5 — ensure tenant SIP domain row exists (catalog → edge).
+     * Body: { domain, setid, description? }
+     */
+    public function registerDomain(Request $request, OpenSIPSMIService $mi): JsonResponse
+    {
+        $domainName = strtolower(trim((string) $request->input('domain', '')));
+        $setid = (int) $request->input('setid', 0);
+        if ($domainName === '' || $setid < 1) {
+            return response()->json(['message' => 'domain and setid (>=1) required'], 422);
+        }
+
+        $destCount = Dispatcher::query()->where('setid', $setid)->count();
+        if ($destCount < 1) {
+            return response()->json([
+                'message' => "No dispatcher destinations for setid {$setid}",
+            ], 422);
+        }
+
+        $domain = Domain::query()->where('domain', $domainName)->first();
+        $created = false;
+        if ($domain === null) {
+            $domain = new Domain([
+                'domain' => $domainName,
+                'setid' => $setid,
+            ]);
+            $domain->save();
+            $created = true;
+        } else {
+            $domain->setid = $setid;
+            $domain->save();
+        }
+        $mi->domainReload();
+
+        return response()->json([
+            'ok' => true,
+            'created' => $created,
+            'domain' => $domainName,
+            'setid' => $setid,
+        ]);
+    }
 }
