@@ -18,7 +18,7 @@ class DoorKnockAttemptResource extends Resource
 {
     protected static ?string $model = DoorKnockAttempt::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-lock-closed';
+    protected static ?string $navigationIcon = 'lucide-lock';
 
     protected static ?string $navigationLabel = 'Door-Knock Attempts';
 

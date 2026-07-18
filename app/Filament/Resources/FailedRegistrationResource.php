@@ -18,7 +18,7 @@ class FailedRegistrationResource extends Resource
 {
     protected static ?string $model = FailedRegistration::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shield-exclamation';
+    protected static ?string $navigationIcon = 'lucide-shield-alert';
 
     protected static ?string $navigationLabel = 'Failed Registrations';
 

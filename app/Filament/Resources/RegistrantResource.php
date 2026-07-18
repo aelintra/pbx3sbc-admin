@@ -15,7 +15,7 @@ class RegistrantResource extends Resource
 {
     protected static ?string $model = Registrant::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-up-tray';
+    protected static ?string $navigationIcon = 'lucide-upload';
 
     protected static ?string $navigationLabel = 'Registrations';
 

@@ -337,3 +337,9 @@
 .fi-badge {
     border-radius: 9999px !important;
 }
+
+/* Lucide sidebar icons — match SPA NavIcon ~16px stroke weight */
+.fi-sidebar-item-icon {
+    width: 1rem !important;
+    height: 1rem !important;
+}

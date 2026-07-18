@@ -17,7 +17,7 @@ class DrGatewayResource extends Resource
 {
     protected static ?string $model = DrGateway::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-server-stack';
+    protected static ?string $navigationIcon = 'lucide-network';
 
     protected static ?string $navigationLabel = 'Peers';
 

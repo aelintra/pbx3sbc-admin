@@ -9,6 +9,8 @@ class Dashboard extends BaseDashboard
 {
     protected static ?string $navigationLabel = 'Home';
 
+    protected static ?string $navigationIcon = 'lucide-home';
+
     public function getTitle(): string | Htmlable
     {
         $fqdn = parse_url((string) config('app.url'), PHP_URL_HOST)

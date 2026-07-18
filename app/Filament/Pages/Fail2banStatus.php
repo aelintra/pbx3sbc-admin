@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Cache;
 
 class Fail2banStatus extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-shield-exclamation';
+    protected static ?string $navigationIcon = 'lucide-shield-alert';
     
     protected static string $view = 'filament.pages.fail2ban-status';
     

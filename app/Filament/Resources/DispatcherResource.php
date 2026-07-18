@@ -15,7 +15,7 @@ class DispatcherResource extends Resource
 {
     protected static ?string $model = Dispatcher::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-server';
+    protected static ?string $navigationIcon = 'lucide-server';
 
     protected static ?string $navigationLabel = 'Destinations';
 

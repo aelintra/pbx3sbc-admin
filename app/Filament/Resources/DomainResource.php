@@ -14,7 +14,7 @@ class DomainResource extends Resource
 {
     protected static ?string $model = Domain::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-globe-alt';
+    protected static ?string $navigationIcon = 'lucide-globe';
 
     public static function shouldRegisterNavigation(): bool
     {

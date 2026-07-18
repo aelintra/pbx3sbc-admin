@@ -22,7 +22,7 @@ class CallRouteResource extends Resource
 {
     protected static ?string $model = Domain::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-path';
+    protected static ?string $navigationIcon = 'lucide-git-branch';
 
     protected static ?string $navigationLabel = 'Call Routes';
 
@@ -271,7 +271,7 @@ class CallRouteResource extends Resource
                     }),
                 Tables\Actions\Action::make('manage_destinations')
                     ->label('Manage Destinations')
-                    ->icon('heroicon-o-server')
+                    ->icon('lucide-server')
                     ->color('info')
                     ->url(fn ($record) => DispatcherResource::getUrl('index', [
                         'tableFilters' => [

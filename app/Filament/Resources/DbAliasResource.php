@@ -15,7 +15,7 @@ class DbAliasResource extends Resource
 {
     protected static ?string $model = DbAlias::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-at-symbol';
+    protected static ?string $navigationIcon = 'lucide-phone-incoming';
 
     protected static ?string $navigationLabel = 'DID aliases';
 

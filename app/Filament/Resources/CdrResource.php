@@ -18,7 +18,7 @@ class CdrResource extends Resource
 {
     protected static ?string $model = Cdr::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-phone';
+    protected static ?string $navigationIcon = 'lucide-scroll-text';
 
     protected static ?string $navigationLabel = 'CDR';
 

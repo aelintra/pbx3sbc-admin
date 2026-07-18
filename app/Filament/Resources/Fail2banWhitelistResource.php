@@ -18,7 +18,7 @@ class Fail2banWhitelistResource extends Resource
 {
     protected static ?string $model = Fail2banWhitelist::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shield-check';
+    protected static ?string $navigationIcon = 'lucide-shield-check';
 
     protected static ?string $navigationLabel = 'Whitelist';
 

@@ -18,7 +18,7 @@ class DialogResource extends Resource
 {
     protected static ?string $model = Dialog::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-phone-arrow-up-right';
+    protected static ?string $navigationIcon = 'lucide-phone-outgoing';
 
     protected static ?string $navigationLabel = 'Active Calls';
 

@@ -19,7 +19,7 @@ class DrRuleResource extends Resource
 {
     protected static ?string $model = DrRule::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-map';
+    protected static ?string $navigationIcon = 'lucide-route';
 
     protected static ?string $navigationLabel = 'Number routes';
 
