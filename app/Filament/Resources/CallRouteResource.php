@@ -271,8 +271,9 @@ class CallRouteResource extends Resource
                             ->send();
                     }),
                 Tables\Actions\Action::make('manage_destinations')
-                    ->label('Manage Destinations')
+                    ->iconButton()
                     ->icon('lucide-server')
+                    ->tooltip('Manage destinations')
                     ->color('info')
                     ->url(fn ($record) => DispatcherResource::getUrl('index', [
                         'tableFilters' => [
