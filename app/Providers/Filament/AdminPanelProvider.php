@@ -47,6 +47,11 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::TOPBAR_START,
                 fn (): string => Blade::render('@include(\'filament.hooks.topbar-brand\')'),
             )
+            // SPA: inline Logged in as + Logout (hide Filament avatar menu via theme.css).
+            ->renderHook(
+                PanelsRenderHook::TOPBAR_END,
+                fn (): string => Blade::render('@include(\'filament.hooks.topbar-user\')'),
+            )
             // Most-used ops first (Peering then Routing); Fail2Ban then Logs at the bottom.
             ->navigationGroups([
                 NavigationGroup::make('Peering'),

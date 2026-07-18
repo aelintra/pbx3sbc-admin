@@ -27,8 +27,64 @@
     @apply !bg-gray-50;
 }
 
+/* SPA .topbar: padding 0.75rem 1.5rem — Filament defaults to h-16 (64px) */
 .fi-topbar > nav {
-    @apply !bg-gray-50 !shadow-none;
+    height: auto !important;
+    min-height: 0 !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+    box-shadow: none !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+    @apply !bg-gray-50 !shadow-none !ring-0;
+}
+
+/* SPA .logo: 1.25rem / 600 / #0f172a */
+.pbx-topbar-brand-link,
+.pbx-topbar-brand span {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+    color: #0f172a !important;
+}
+
+.dark .pbx-topbar-brand-link,
+.dark .pbx-topbar-brand span {
+    color: #f8fafc !important;
+}
+
+/* Hide Filament avatar dropdown; SPA-style cluster is TOPBAR_END hook */
+.fi-user-menu {
+    display: none !important;
+}
+
+/* Avoid empty ms-auto flex gap when avatar is hidden but wrapper remains */
+.fi-topbar > nav > div.ms-auto:has(.fi-user-menu) {
+    display: none !important;
+}
+
+/* SPA .user / .logout-btn */
+.pbx-topbar-user-label {
+    font-size: 0.875rem !important;
+    color: #64748b !important;
+}
+
+.pbx-topbar-logout-btn {
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1.25 !important;
+    color: #64748b !important;
+    background: transparent !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 0.375rem !important;
+    cursor: pointer !important;
+}
+
+.pbx-topbar-logout-btn:hover {
+    color: #0f172a !important;
+    background: #f1f5f9 !important;
 }
 
 .fi-main,
