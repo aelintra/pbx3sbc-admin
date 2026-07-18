@@ -119,13 +119,23 @@
     color: #f8fafc !important;
 }
 
-/* Hide Filament avatar dropdown; SPA-style cluster is TOPBAR_END hook */
+/* Hide Filament avatar dropdown entirely (class may be fi-dropdown, not fi-user-menu). */
+.fi-topbar .fi-user-avatar,
+.fi-topbar .fi-dropdown:has(.fi-user-avatar),
+.fi-topbar .fi-dropdown-trigger:has(.fi-user-avatar) {
+    display: none !important;
+}
+
 .fi-user-menu {
     display: none !important;
 }
 
-/* Avoid empty ms-auto flex gap when avatar is hidden but wrapper remains */
-.fi-topbar > nav > div.ms-auto:has(.fi-user-menu) {
+/*
+ * Filament wraps user-menu in nav > div.ms-auto. Hide that stock cluster so the
+ * avatar cannot sit near the centered Instance chip. Our SPA cluster is
+ * .pbx-topbar-user (also ms-auto) and must stay visible.
+ */
+.fi-topbar > nav > div.ms-auto:not(.pbx-topbar-user) {
     display: none !important;
 }
 
