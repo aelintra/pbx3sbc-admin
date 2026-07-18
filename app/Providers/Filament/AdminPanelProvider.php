@@ -40,7 +40,8 @@ class AdminPanelProvider extends PanelProvider
                 'gray' => Color::Slate,
             ])
             ->defaultThemeMode(ThemeMode::Light)
-            ->theme(asset('css/filament/admin/theme.css'))
+            // Cache-bust: browsers cache theme.css hard without a query string (forms/support use ?v=).
+            ->theme(asset('css/filament/admin/theme.css') . '?v=' . (string) filemtime(public_path('css/filament/admin/theme.css')))
             ->sidebarWidth('15.75rem') // match pbx3spa --pbx-shell-sidebar-width
             // SPA: brand in main topbar-left (not sidebar). Hide sidebar logo via theme.css.
             ->renderHook(
