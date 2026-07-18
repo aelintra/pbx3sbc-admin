@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\DrRuleResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\DrRuleResource;
 use App\Services\DrRulePrefixOverlap;
 use App\Services\OpenSIPSMIService;
@@ -10,6 +12,8 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateDrRule extends CreateRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = DrRuleResource::class;
 
     protected static bool $canCreateAnother = false;

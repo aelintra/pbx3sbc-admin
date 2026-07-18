@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\DbAliasResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\DbAliasResource;
 use Filament\Actions;
 use Filament\Notifications\Notification;
@@ -9,6 +11,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditDbAlias extends EditRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = DbAliasResource::class;
 
     protected function getHeaderActions(): array

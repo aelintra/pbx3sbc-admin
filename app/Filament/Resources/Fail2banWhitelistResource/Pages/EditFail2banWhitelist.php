@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Fail2banWhitelistResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\Fail2banWhitelistResource;
 use App\Services\WhitelistSyncService;
 use Filament\Actions;
@@ -10,6 +12,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditFail2banWhitelist extends EditRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = Fail2banWhitelistResource::class;
 
     protected function getHeaderActions(): array

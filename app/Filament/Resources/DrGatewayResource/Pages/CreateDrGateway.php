@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\DrGatewayResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\DrGatewayResource;
 use App\Services\OpenSIPSMIService;
 use Filament\Notifications\Notification;
@@ -9,6 +11,8 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateDrGateway extends CreateRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = DrGatewayResource::class;
 
     protected static bool $canCreateAnother = false;

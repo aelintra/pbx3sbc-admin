@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\DrRuleResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\DrRuleResource;
 use App\Services\DrRulePrefixOverlap;
 use App\Services\OpenSIPSMIService;
@@ -11,6 +13,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditDrRule extends EditRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = DrRuleResource::class;
 
     protected function getHeaderActions(): array

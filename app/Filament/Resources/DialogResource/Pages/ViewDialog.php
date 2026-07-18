@@ -2,12 +2,16 @@
 
 namespace App\Filament\Resources\DialogResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\DialogResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewDialog extends ViewRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = DialogResource::class;
 
     protected function getHeaderActions(): array

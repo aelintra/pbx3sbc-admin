@@ -2,12 +2,16 @@
 
 namespace App\Filament\Resources\DbAliasResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\DbAliasResource;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateDbAlias extends CreateRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = DbAliasResource::class;
 
     protected static bool $canCreateAnother = false;

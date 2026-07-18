@@ -2,12 +2,16 @@
 
 namespace App\Filament\Resources\Fail2banWhitelistResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\Fail2banWhitelistResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewFail2banWhitelist extends ViewRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = Fail2banWhitelistResource::class;
 
     protected function getHeaderActions(): array

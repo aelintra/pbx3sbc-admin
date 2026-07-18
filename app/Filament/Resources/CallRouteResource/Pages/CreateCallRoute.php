@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\CallRouteResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\CallRouteResource;
 use App\Filament\Resources\DispatcherResource;
 use App\Models\Domain;
@@ -14,6 +16,8 @@ use Illuminate\Support\Facades\Log;
 
 class CreateCallRoute extends CreateRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = CallRouteResource::class;
 
     protected static bool $canCreateAnother = false;

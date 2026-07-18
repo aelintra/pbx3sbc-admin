@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\RegistrantResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\RegistrantResource;
 use App\Services\OpenSIPSMIService;
 use Filament\Actions;
@@ -10,6 +12,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditRegistrant extends EditRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = RegistrantResource::class;
 
     protected function mutateFormDataBeforeFill(array $data): array

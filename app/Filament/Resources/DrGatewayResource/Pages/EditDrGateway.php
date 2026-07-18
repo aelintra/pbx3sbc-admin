@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\DrGatewayResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\DrGatewayResource;
 use App\Models\DrGateway;
 use App\Services\OpenSIPSMIService;
@@ -11,6 +13,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditDrGateway extends EditRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = DrGatewayResource::class;
 
     protected function getHeaderActions(): array

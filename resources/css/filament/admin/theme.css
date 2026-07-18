@@ -338,8 +338,19 @@
     border-radius: 9999px !important;
 }
 
-/* Lucide sidebar icons — match SPA NavIcon ~16px stroke weight */
-.fi-sidebar-item-icon {
-    width: 1rem !important;
-    height: 1rem !important;
+/* SPA PanelBackLink — ← list above page heading */
+.pbx-panel-back-link {
+    align-self: flex-start;
+    color: #2563eb !important;
+    text-decoration: none !important;
+    font-size: 0.875rem !important;
+    line-height: 1.25 !important;
+}
+
+.pbx-panel-back-link:hover {
+    text-decoration: underline !important;
+}
+
+.dark .pbx-panel-back-link {
+    color: #60a5fa !important;
 }

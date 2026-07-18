@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\RegistrantResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\RegistrantResource;
 use App\Services\OpenSIPSMIService;
 use Filament\Notifications\Notification;
@@ -9,6 +11,8 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateRegistrant extends CreateRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = RegistrantResource::class;
 
     protected static bool $canCreateAnother = false;

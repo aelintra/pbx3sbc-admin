@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\DispatcherResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\DispatcherResource;
 use App\Services\OpenSIPSMIService;
 use Filament\Actions;
@@ -9,9 +11,33 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateDispatcher extends CreateRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = DispatcherResource::class;
     
     protected static bool $canCreateAnother = false;
+
+    protected function getPanelBackUrl(): string
+    {
+        $setid = $this->getSetidFromFilter();
+
+        if ($setid !== null) {
+            return DispatcherResource::getUrl('index', [
+                'tableFilters' => [
+                    'setid' => [
+                        'value' => $setid,
+                    ],
+                ],
+            ]);
+        }
+
+        return DispatcherResource::getUrl('index');
+    }
+
+    protected function getPanelBackLabel(): string
+    {
+        return 'Destinations';
+    }
 
     protected function getSetidFromFilter(): ?int
     {

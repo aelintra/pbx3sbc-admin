@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Fail2banWhitelistResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\Fail2banWhitelistResource;
 use App\Services\WhitelistSyncService;
 use Filament\Notifications\Notification;
@@ -9,6 +11,8 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateFail2banWhitelist extends CreateRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = Fail2banWhitelistResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

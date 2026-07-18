@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\CallRouteResource\Pages;
 
+use App\Filament\Concerns\HasPanelBackLink;
+
 use App\Filament\Resources\CallRouteResource;
 use App\Models\Dispatcher;
 use App\Services\OpenSIPSMIService;
@@ -12,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class EditCallRoute extends EditRecord
 {
+    use HasPanelBackLink;
+
     protected static string $resource = CallRouteResource::class;
 
     public function getHeading(): string
