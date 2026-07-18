@@ -332,3 +332,8 @@
 .dark .fi-sidebar-item-active .fi-sidebar-item-button .fi-sidebar-item-icon {
     @apply !text-primary-400;
 }
+
+/* SPA .list-chip: pill radius (Filament badges default to rounded-md / hard corners) */
+.fi-badge {
+    border-radius: 9999px !important;
+}
