@@ -227,8 +227,9 @@ class CallRouteResource extends Resource
             ])
             ->actions([
                 Tables\Actions\Action::make('edit_domain')
-                    ->label('Edit Domain')
-                    ->icon('heroicon-o-pencil')
+                    ->iconButton()
+                    ->icon('lucide-pencil')
+                    ->tooltip('Edit domain')
                     ->color('warning')
                     ->modalHeading(fn ($record) => 'Edit Domain: ' . $record->domain)
                     ->form([
