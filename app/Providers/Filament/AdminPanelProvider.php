@@ -52,6 +52,11 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::TOPBAR_END,
                 fn (): string => Blade::render('@include(\'filament.hooks.topbar-user\')'),
             )
+            // SPA: © Aelintra Telecom at bottom of left nav.
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_FOOTER,
+                fn (): string => Blade::render('@include(\'filament.hooks.sidebar-footer\')'),
+            )
             // Most-used ops first (Peering then Routing); Fail2Ban then Logs at the bottom.
             ->navigationGroups([
                 NavigationGroup::make('Peering'),
