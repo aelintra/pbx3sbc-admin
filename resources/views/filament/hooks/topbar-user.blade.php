@@ -33,4 +33,89 @@
             </div>
         @endif
     </div>
+
+    @once
+        <script>
+            (() => {
+                const timeoutMs = {{ max(0.1, (float) config('panel.inactivity_timeout_minutes', 10)) * 60 * 1000 }};
+                const logoutUrl = @js($logoutUrl);
+                const loginUrl = @js(filament()->getLoginUrl());
+                const csrfToken = @js(csrf_token());
+                const activityEvents = ['pointerdown', 'keydown', 'scroll', 'touchstart', 'wheel'];
+                const activityStorageKey = 'pbx3sbc-admin.lastActivityAt';
+                let timerId = null;
+                let deadline = Date.now() + timeoutMs;
+                let loggingOut = false;
+                let lastBroadcastAt = 0;
+
+                const logout = () => {
+                    if (loggingOut) return;
+                    loggingOut = true;
+                    window.clearTimeout(timerId);
+
+                    const body = new URLSearchParams({ _token: csrfToken });
+                    fetch(logoutUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body,
+                    }).finally(() => window.location.replace(loginUrl));
+                };
+
+                const expireIfIdle = () => {
+                    window.clearTimeout(timerId);
+                    let sharedActivityAt = 0;
+                    try {
+                        sharedActivityAt = Number(localStorage.getItem(activityStorageKey));
+                    } catch {
+                        // Storage may be unavailable in private mode.
+                    }
+                    if (Number.isFinite(sharedActivityAt)) {
+                        deadline = Math.max(deadline, sharedActivityAt + timeoutMs);
+                    }
+                    const remaining = deadline - Date.now();
+                    if (remaining > 0) {
+                        timerId = window.setTimeout(expireIfIdle, remaining);
+                        return;
+                    }
+                    logout();
+                };
+
+                const resetTimer = () => {
+                    if (loggingOut) return;
+                    window.clearTimeout(timerId);
+                    const now = Date.now();
+                    deadline = now + timeoutMs;
+                    timerId = window.setTimeout(expireIfIdle, timeoutMs);
+                    if (now - lastBroadcastAt >= 1000) {
+                        lastBroadcastAt = now;
+                        try {
+                            localStorage.setItem(activityStorageKey, String(now));
+                        } catch {
+                            // Storage may be unavailable in private mode.
+                        }
+                    }
+                };
+
+                for (const event of activityEvents) {
+                    window.addEventListener(event, resetTimer, { passive: true });
+                }
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') expireIfIdle();
+                });
+                window.addEventListener('storage', (event) => {
+                    if (event.key !== activityStorageKey) return;
+                    const activityAt = Number(event.newValue);
+                    if (!Number.isFinite(activityAt)) return;
+                    window.clearTimeout(timerId);
+                    deadline = activityAt + timeoutMs;
+                    timerId = window.setTimeout(expireIfIdle, Math.max(0, deadline - Date.now()));
+                });
+                resetTimer();
+            })();
+        </script>
+    @endonce
 @endif
