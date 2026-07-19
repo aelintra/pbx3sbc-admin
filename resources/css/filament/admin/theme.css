@@ -274,17 +274,56 @@
 }
 
 /*
- * SPA kinship: brand in main topbar only.
- * Hide Filament sidebar header entirely; pad the nav top to match SPA
- * .sidebar-top-spacer (~4rem) + nav pad — empty header was collapsing in practice.
+ * SPA kinship: PBX³ BrandMark in sidebar header; topbar shows mode label (SBC).
+ * Header height matches SPA BrandMark / former spacer.
  */
 .fi-sidebar-header {
-    display: none !important;
+    display: flex !important;
+    height: auto !important;
+    min-height: calc(0.75rem * 2 + 2rem * 1.25) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    box-shadow: none !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+    @apply !bg-gray-100 !shadow-none !ring-0;
+}
+
+.fi-sidebar-header .fi-logo {
+    height: auto !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Match pbx3spa BrandMark.vue */
+.pbx-brand-mark {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    line-height: 1 !important;
+    color: #0f172a !important;
+    user-select: none !important;
+}
+
+.pbx-brand-mark-3 {
+    font-size: 0.72em !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    vertical-align: super !important;
+    color: #3b82f6 !important;
+}
+
+.dark .pbx-brand-mark {
+    color: #f8fafc !important;
 }
 
 .fi-sidebar-nav {
-    /* SPA: spacer ~4rem + nav padding-top 0.65rem ≈ 4.65rem before first item */
-    padding-top: 4.65rem !important;
+    /* SPA .nav padding-top 0.65rem — brand sits in header above */
+    padding-top: 0.65rem !important;
     padding-bottom: 1rem !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;

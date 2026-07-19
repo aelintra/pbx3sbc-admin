@@ -32,7 +32,10 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->profile(isSimple: false)
             // Match pbx3spa shell: slate surfaces + blue #2563eb accent (STYLESYNC / SPA --pbx-*)
-            ->brandName('PBX3 SBC')
+            // Topbar shows mode label; sidebar shows PBX³ mark (SPA BrandMark kinship).
+            ->brandName('SBC')
+            ->brandLogo(fn () => view('filament.hooks.sidebar-brand'))
+            ->brandLogoHeight('2.5rem')
             ->colors([
                 'primary' => '#2563eb',
                 'danger' => '#dc2626',
@@ -42,7 +45,7 @@ class AdminPanelProvider extends PanelProvider
             // Cache-bust: browsers cache theme.css hard without a query string (forms/support use ?v=).
             ->theme(asset('css/filament/admin/theme.css') . '?v=' . (string) filemtime(public_path('css/filament/admin/theme.css')))
             ->sidebarWidth('15.75rem') // match pbx3spa --pbx-shell-sidebar-width
-            // SPA: brand in main topbar-left (not sidebar). Hide sidebar logo via theme.css.
+            // SPA: mode label in main topbar-left; PBX³ mark in sidebar header.
             ->renderHook(
                 PanelsRenderHook::TOPBAR_START,
                 fn (): string => Blade::render('@include(\'filament.hooks.topbar-brand\')'),

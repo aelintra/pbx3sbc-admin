@@ -3,7 +3,7 @@
     $brandName = filament()->getBrandName();
 @endphp
 
-{{-- SPA kinship: brand lives in the main topbar (left), not the sidebar header --}}
+{{-- SPA kinship: mode label in topbar-left; PBX³ mark lives in sidebar header --}}
 <div class="pbx-topbar-brand me-2 flex min-w-0 items-center">
     @if ($homeUrl)
         <a
