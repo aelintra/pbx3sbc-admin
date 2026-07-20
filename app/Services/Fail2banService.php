@@ -196,14 +196,23 @@ class Fail2banService
         }
 
         $commonPaths = [
+            base_path('../pbx3sbc/scripts/tail-fail2ban-log.sh'),
             '/home/ubuntu/pbx3sbc/scripts/tail-fail2ban-log.sh',
+            '/home/tech/pbx3sbc/scripts/tail-fail2ban-log.sh',
             '/opt/pbx3sbc/scripts/tail-fail2ban-log.sh',
             '/usr/local/pbx3sbc/scripts/tail-fail2ban-log.sh',
-            base_path('../pbx3sbc/scripts/tail-fail2ban-log.sh'),
         ];
 
         foreach ($commonPaths as $path) {
-            if (file_exists($path)) {
+            $resolved = realpath($path) ?: $path;
+            if (file_exists($resolved)) {
+                return $resolved;
+            }
+        }
+
+        // Last resort: any home install tree
+        foreach (glob('/home/*/pbx3sbc/scripts/tail-fail2ban-log.sh') ?: [] as $path) {
+            if (is_file($path)) {
                 return $path;
             }
         }
