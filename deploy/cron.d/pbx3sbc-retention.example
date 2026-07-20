@@ -1,0 +1,17 @@
+# SBC MySQL append-only purge (WS1 + WS2).
+# Spec: pbx3/pbx3-directory/docs/SBC_DATA_RETENTION_REQUIREMENTS.md
+#
+# Install (lab/prod):
+#   sudo cp deploy/cron.d/pbx3sbc-retention.example /etc/cron.d/pbx3sbc-retention
+#   sudo chmod 644 /etc/cron.d/pbx3sbc-retention
+#
+# Lab path today: /home/ubuntu/pbx3sbc-admin — edit APPDIR below if different.
+# Always dry-run once before enabling cron:
+#   cd /home/ubuntu/pbx3sbc-admin && php artisan pbx3sbc:purge-security-events --dry-run
+#   cd /home/ubuntu/pbx3sbc-admin && php artisan pbx3sbc:purge-acc --dry-run
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+15 6 * * * root cd /home/ubuntu/pbx3sbc-admin && /usr/bin/php artisan pbx3sbc:purge-security-events >> /var/log/pbx3sbc-purge-security.log 2>&1
+20 6 * * * root cd /home/ubuntu/pbx3sbc-admin && /usr/bin/php artisan pbx3sbc:purge-acc >> /var/log/pbx3sbc-purge-acc.log 2>&1
