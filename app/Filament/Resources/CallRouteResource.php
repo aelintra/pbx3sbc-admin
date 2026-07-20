@@ -36,6 +36,34 @@ class CallRouteResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Domain')
                     ->schema([
+                        Forms\Components\Placeholder::make('domain_view')
+                            ->label('Domain')
+                            ->content(fn ($livewire) => $livewire->getRecord()?->domain ?? '—'),
+                        Forms\Components\Placeholder::make('setid_view')
+                            ->label('Set ID')
+                            ->content(fn ($livewire) => (string) ($livewire->getRecord()?->setid ?? '—')),
+                    ])
+                    ->visible(fn ($livewire) => $livewire instanceof ViewRecord),
+
+                Forms\Components\Section::make('Destinations')
+                    ->schema([
+                        Forms\Components\View::make('filament.forms.components.existing-destinations-table')
+                            ->viewData(function ($livewire) {
+                                $record = method_exists($livewire, 'getRecord') ? $livewire->getRecord() : null;
+                                if ($record && ! $record->relationLoaded('dispatchers')) {
+                                    $record->load('dispatchers');
+                                }
+
+                                return [
+                                    'dispatchers' => $record?->dispatchers ?? collect(),
+                                ];
+                            }),
+                    ])
+                    ->description('Read-only. Use Manage destinations on the list to edit individual SIP URIs.')
+                    ->visible(fn ($livewire) => $livewire instanceof ViewRecord),
+
+                Forms\Components\Section::make('Domain')
+                    ->schema([
                         Forms\Components\Radio::make('domain_type')
                             ->label('Domain Type')
                             ->options([
@@ -192,7 +220,8 @@ class CallRouteResource extends Resource
                             ->rows(2)
                             ->label('Description')
                             ->helperText('Description for this destination'),
-                    ]),
+                    ])
+                    ->visible(fn ($livewire) => ! ($livewire instanceof ViewRecord)),
             ]);
     }
 
