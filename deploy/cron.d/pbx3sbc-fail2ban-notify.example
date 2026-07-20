@@ -1,0 +1,19 @@
+# SBC Fail2ban ban → Gatekeeper ops email.
+# Spec: pbx3/pbx3-directory/docs/FLEET_OPS_NOTIFICATION_REQUIREMENTS.md § Fail2ban
+#
+# Requires in pbx3sbc-admin .env:
+#   PBX3_OPS_FAIL2BAN_BAN_NOTIFY=true
+#   PBX3_GATEKEEPER_URL=https://control.pbx3.com
+#   PBX3_GATEKEEPER_TOKEN=<break-glass or fleet_admin token>
+# Optional: PBX3_OPS_SBC_FQDN=sbc.pbx3.com
+#
+# Install:
+#   sudo cp deploy/cron.d/pbx3sbc-fail2ban-notify.example /etc/cron.d/pbx3sbc-fail2ban-notify
+#   sudo chmod 644 /etc/cron.d/pbx3sbc-fail2ban-notify
+#
+# First run seeds current bans without mailing. Lab path: edit APPDIR below.
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+* * * * * root cd /home/ubuntu/pbx3sbc-admin && /usr/bin/php artisan pbx3sbc:ops-fail2ban-bans >> /var/log/pbx3sbc-fail2ban-notify.log 2>&1

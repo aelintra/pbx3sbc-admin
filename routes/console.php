@@ -51,3 +51,28 @@ Artisan::command('pbx3sbc:purge-acc {--days= : Override local_days (default 90)}
         ));
     }
 })->purpose('Purge OpenSIPS acc (edge CDR) older than retention (WS2)');
+
+Artisan::command('pbx3sbc:ops-fail2ban-bans', function (
+    \App\Services\Ops\Fail2banBanNotifyScanner $scanner,
+) {
+    $result = $scanner->run();
+    if (! $result['enabled']) {
+        $this->info('disabled (set PBX3_OPS_FAIL2BAN_BAN_NOTIFY=true)');
+
+        return 0;
+    }
+    $this->info(sprintf(
+        'seeded=%s current=%d new=%d emitted=%d skipped_cap=%d errors=%d',
+        $result['seeded'] ? 'yes' : 'no',
+        $result['current'],
+        $result['new'],
+        $result['emitted'],
+        $result['skipped_cap'],
+        count($result['errors'])
+    ));
+    foreach ($result['errors'] as $err) {
+        $this->warn($err);
+    }
+
+    return count($result['errors']) > 0 && $result['emitted'] === 0 ? 1 : 0;
+})->purpose('Diff Fail2ban bans and notify Gatekeeper (ops email)');
