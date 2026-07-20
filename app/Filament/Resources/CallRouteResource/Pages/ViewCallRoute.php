@@ -22,8 +22,8 @@ class ViewCallRoute extends ViewRecord
 
     protected function getHeaderActions(): array
     {
+        // Read-only view: mutate via list (edit domain / delete) or Manage destinations.
         return [
-            Actions\EditAction::make(),
             Actions\Action::make('manage_destinations')
                 ->label('Manage destinations')
                 ->icon('lucide-server')
