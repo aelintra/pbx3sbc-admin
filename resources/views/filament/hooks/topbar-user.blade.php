@@ -6,7 +6,7 @@
         ?: request()->getHost();
 @endphp
 
-{{-- SPA kinship: centered Instance chip + Logged in as / Logout / theme --}}
+{{-- SPA kinship: centered Instance chip + Logged in as / Logout --}}
 @if ($instanceFqdn)
     <div class="pbx-topbar-center" role="group" aria-label="Connected PBX context">
         <span class="pbx-context-chip" title="SBC instance FQDN (APP_URL)">
@@ -27,11 +27,6 @@
                 Logout
             </button>
         </form>
-        @if (filament()->hasDarkMode() && (! filament()->hasDarkModeForced()))
-            <div class="pbx-topbar-theme shrink-0">
-                <x-filament-panels::theme-switcher />
-            </div>
-        @endif
     </div>
 
     @once

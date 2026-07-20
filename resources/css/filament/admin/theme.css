@@ -1,7 +1,7 @@
 /**
  * PBX3 SBC Admin — Filament theme aligned with pbx3spa shell tokens.
  * Compile: npm run build:filament-theme
- * Light: slate canvas / subtle sidebar / blue accent. Dark mode kept.
+ * Light: slate canvas / subtle sidebar / blue accent. Dark mode disabled (SPA kinship).
  */
 @tailwind base;
 @tailwind components;
@@ -159,11 +159,6 @@
 .pbx-topbar-logout-btn:hover {
     color: #0f172a !important;
     background: #f1f5f9 !important;
-}
-
-/* Theme switcher sits after Logout (far right of user cluster) */
-.pbx-topbar-theme .fi-theme-switcher {
-    gap: 0.15rem !important;
 }
 
 .fi-main,

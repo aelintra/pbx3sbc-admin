@@ -41,6 +41,8 @@ class AdminPanelProvider extends PanelProvider
                 'danger' => '#dc2626',
                 'gray' => Color::Slate,
             ])
+            // SPA has no dark mode; Filament dark was incomplete (headings vanished). Light only.
+            ->darkMode(false)
             ->defaultThemeMode(ThemeMode::Light)
             // Cache-bust: browsers cache theme.css hard without a query string (forms/support use ?v=).
             ->theme(asset('css/filament/admin/theme.css') . '?v=' . (string) filemtime(public_path('css/filament/admin/theme.css')))
