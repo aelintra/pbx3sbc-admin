@@ -184,6 +184,80 @@ class Fail2banService
         
         return true;
     }
+
+    /**
+     * Path to the capped fail2ban log tail helper (sudo).
+     */
+    protected function getTailLogScriptPath(): string
+    {
+        $scriptPath = env('FAIL2BAN_TAIL_LOG_SCRIPT_PATH');
+        if ($scriptPath && file_exists($scriptPath)) {
+            return $scriptPath;
+        }
+
+        $commonPaths = [
+            '/home/ubuntu/pbx3sbc/scripts/tail-fail2ban-log.sh',
+            '/opt/pbx3sbc/scripts/tail-fail2ban-log.sh',
+            '/usr/local/pbx3sbc/scripts/tail-fail2ban-log.sh',
+            base_path('../pbx3sbc/scripts/tail-fail2ban-log.sh'),
+        ];
+
+        foreach ($commonPaths as $path) {
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return '/home/ubuntu/pbx3sbc/scripts/tail-fail2ban-log.sh';
+    }
+
+    /**
+     * Tail /var/log/fail2ban.log (via sudo helper). Returns lines + metadata.
+     *
+     * @return array{lines: list<string>, line_count: int, path: string, error: ?string}
+     */
+    public function getLogTail(int $lines = 200): array
+    {
+        $lines = max(1, min(2000, $lines));
+        $scriptPath = $this->getTailLogScriptPath();
+
+        if (! file_exists($scriptPath)) {
+            return [
+                'lines' => [],
+                'line_count' => 0,
+                'path' => '/var/log/fail2ban.log',
+                'error' => "Tail helper not found at {$scriptPath}. Deploy scripts/tail-fail2ban-log.sh and update sudoers.",
+            ];
+        }
+
+        $result = Process::run(['sudo', $scriptPath, (string) $lines]);
+
+        if (! $result->successful()) {
+            $error = trim($result->errorOutput() ?: $result->output()) ?: 'Failed to read fail2ban log';
+            Log::error('Fail2ban log tail failed', [
+                'script' => $scriptPath,
+                'exit_code' => $result->exitCode(),
+                'error' => $error,
+            ]);
+
+            return [
+                'lines' => [],
+                'line_count' => 0,
+                'path' => '/var/log/fail2ban.log',
+                'error' => $error,
+            ];
+        }
+
+        $output = rtrim($result->output(), "\n");
+        $logLines = $output === '' ? [] : explode("\n", $output);
+
+        return [
+            'lines' => $logLines,
+            'line_count' => count($logLines),
+            'path' => '/var/log/fail2ban.log',
+            'error' => null,
+        ];
+    }
     
     /**
      * Parse Fail2Ban status output
