@@ -106,7 +106,7 @@ class LetsEncryptService
      */
     private function run(array $args, int $timeout = 30): string
     {
-        $cmd = array_merge(['sudo', $this->scriptPath()], $args);
+        $cmd = array_merge(['sudo', '-n', $this->scriptPath()], $args);
         $result = Process::timeout($timeout)->run($cmd);
         if (! $result->successful()) {
             $err = trim($result->errorOutput() ?: $result->output()) ?: 'command failed';
