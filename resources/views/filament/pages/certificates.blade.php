@@ -52,12 +52,35 @@
                     <x-filament::button
                         wire:click="renewNow"
                         wire:loading.attr="disabled"
+                        wire:target="renewNow"
                         :disabled="$renewing"
                         color="gray"
                     >
                         <span wire:loading.remove wire:target="renewNow">Renew now</span>
-                        <span wire:loading wire:target="renewNow">Renewing…</span>
+                        <span wire:loading wire:target="renewNow" class="inline-flex items-center gap-2">
+                            <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Renewing…
+                        </span>
                     </x-filament::button>
+                </div>
+                <div
+                    wire:loading.flex
+                    wire:target="renewNow"
+                    class="hidden items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <svg class="mt-0.5 h-5 w-5 shrink-0 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <div>
+                        <p class="font-semibold">Renewing certificate…</p>
+                        <p class="mt-1 text-blue-800">Usually under a minute. Keep this tab open.</p>
+                    </div>
                 </div>
                 @if ($renewMessage)
                     <p class="text-sm text-success-600">{{ $renewMessage }}</p>
@@ -92,6 +115,8 @@
                             wire:model="leSetupEmail"
                             class="fi-input block w-full rounded-lg border-gray-300 text-sm shadow-sm"
                             placeholder="admin@example.com"
+                            wire:loading.attr="disabled"
+                            wire:target="setupLetsEncrypt"
                             @disabled($settingUp)
                         />
                     </div>
@@ -99,11 +124,38 @@
                         <x-filament::button
                             wire:click="setupLetsEncrypt"
                             wire:loading.attr="disabled"
+                            wire:target="setupLetsEncrypt"
                             :disabled="$settingUp || $leSetupEmail === ''"
                         >
                             <span wire:loading.remove wire:target="setupLetsEncrypt">Get certificate</span>
-                            <span wire:loading wire:target="setupLetsEncrypt">Getting certificate…</span>
+                            <span wire:loading wire:target="setupLetsEncrypt" class="inline-flex items-center gap-2">
+                                <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Getting certificate…
+                            </span>
                         </x-filament::button>
+                    </div>
+                    {{-- Comfort feedback: first ACME can take 1–3 min (certbot + dhparam). --}}
+                    <div
+                        wire:loading.flex
+                        wire:target="setupLetsEncrypt"
+                        class="hidden items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"
+                        role="status"
+                        aria-live="polite"
+                    >
+                        <svg class="mt-0.5 h-5 w-5 shrink-0 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <div>
+                            <p class="font-semibold">Issuing Let's Encrypt certificate…</p>
+                            <p class="mt-1 text-blue-800">
+                                First run often takes <strong>1–3 minutes</strong> (ACME challenge + TLS setup).
+                                Keep this tab open — the page will update when done.
+                            </p>
+                        </div>
                     </div>
                     @if ($setupErrorMessage)
                         <p class="text-sm text-danger-600">{{ $setupErrorMessage }}</p>

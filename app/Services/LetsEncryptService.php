@@ -50,7 +50,7 @@ class LetsEncryptService
     public function setup(string $email, ?string $fqdn = null): array
     {
         $fqdn ??= $this->fqdn();
-        $result = $this->run(['setup', $fqdn, $email, $this->webroot()], timeout: 180);
+        $result = $this->run(['setup', $fqdn, $email, $this->webroot()], timeout: 300);
         $decoded = json_decode($result, true);
 
         return is_array($decoded) ? $decoded : ['configured' => true, 'domain' => $fqdn];
