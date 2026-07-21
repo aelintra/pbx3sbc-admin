@@ -715,6 +715,16 @@ configure_nginx() {
         SERVER_NAME=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
         log_warn "nginx server_name defaulted to '${SERVER_NAME}' — pass --server-name <public-fqdn> for production"
     fi
+
+    # Keep Laravel APP_URL aligned with public FQDN. Leaving http://localhost breaks Livewire
+    # (RootTagMissingFromViewException) when operators hit the real host. HTTPS is set later by LE.
+    local app_url="http://${SERVER_NAME}"
+    log_info "Setting APP_URL=${app_url} (override to https:// after Let’s Encrypt)"
+    if grep -q '^APP_URL=' "$ENV_FILE" 2>/dev/null; then
+        sed -i "s|^APP_URL=.*|APP_URL=${app_url}|" "$ENV_FILE"
+    else
+        echo "APP_URL=${app_url}" >> "$ENV_FILE"
+    fi
     
     # Create nginx config file
     NGINX_CONFIG="/etc/nginx/sites-available/pbx3sbc-admin"
