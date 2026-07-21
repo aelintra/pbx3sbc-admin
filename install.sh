@@ -3,10 +3,16 @@
 # PBX3SBC Admin Panel Installation Script
 # Installs and configures Laravel + Filament admin panel
 #
-# Usage: ./install.sh [--skip-deps] [--skip-prereqs] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user] [--admin-name NAME] [--admin-email EMAIL] [--admin-password PASSWORD] [--opensips-mi-url URL] [--server-name FQDN]
+# Usage: ./install.sh --server-name FQDN [options]
 #
-# HTTPS (production): after HTTP install, follow pbx3sbc/workingdocs/LE_HTTPS_SBC_ADMIN.md
-# and deploy/nginx-pbx3sbc-admin.conf. Pass --server-name sbc.pbx3.com (not EC2 internal hostname).
+# Required:
+#   --server-name FQDN     Public hostname (e.g. sbc.pbx3.com) — sets nginx + APP_URL
+#
+# Optional HTTPS:
+#   --letsencrypt          Issue Let's Encrypt cert and enable HTTPS nginx
+#   --email EMAIL          ACME contact email (required with --letsencrypt; else uses --admin-email)
+#
+# HTTPS can also be done later from Filament → Certificates (SPA-like panel).
 #
 
 set -euo pipefail
@@ -27,6 +33,7 @@ SKIP_DEPS=false
 SKIP_MIGRATIONS=false
 NO_ADMIN_USER=false
 SKIP_PREREQS=false
+ENABLE_LETSENCRYPT=false
 DB_HOST=""
 DB_USER=""
 DB_PASSWORD=""
@@ -37,6 +44,7 @@ ADMIN_NAME=""
 ADMIN_EMAIL=""
 ADMIN_PASSWORD=""
 NGINX_SERVER_NAME=""
+LE_EMAIL=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -55,6 +63,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --no-admin-user)
             NO_ADMIN_USER=true
+            shift
+            ;;
+        --letsencrypt)
+            ENABLE_LETSENCRYPT=true
             shift
             ;;
         --db-host)
@@ -137,13 +149,33 @@ while [[ $# -gt 0 ]]; do
             NGINX_SERVER_NAME="$2"
             shift 2
             ;;
+        --email)
+            if [[ -z "${2:-}" ]]; then
+                echo -e "${RED}Error: --email requires an address for Let's Encrypt${NC}"
+                exit 1
+            fi
+            LE_EMAIL="$2"
+            shift 2
+            ;;
         *)
             echo -e "${RED}Unknown option: $1${NC}"
-            echo "Usage: $0 [--skip-deps] [--skip-prereqs] [--skip-migrations] [--db-host HOST] [--db-port PORT] [--db-user USER] [--db-password PASSWORD] [--db-name NAME] [--no-admin-user] [--opensips-mi-url URL] [--admin-name NAME] [--admin-email EMAIL] [--admin-password PASSWORD] [--server-name FQDN]"
+            echo "Usage: $0 --server-name FQDN [--letsencrypt --email EMAIL] [--db-host HOST] ..."
             exit 1
             ;;
     esac
 done
+
+require_server_name() {
+    if [[ -z "${NGINX_SERVER_NAME}" ]]; then
+        log_error "--server-name <FQDN> is required (e.g. sbc.pbx3.com or sbcfo.pbx3.com)"
+        log_error "Do not use the EC2 internal hostname."
+        exit 1
+    fi
+    if [[ "${NGINX_SERVER_NAME}" != *.* ]] || [[ "${NGINX_SERVER_NAME}" == "localhost" ]]; then
+        log_error "--server-name must be a public FQDN (got: ${NGINX_SERVER_NAME})"
+        exit 1
+    fi
+}
 
 # Functions
 log_info() {
@@ -712,8 +744,8 @@ configure_nginx() {
     if [[ -n "${NGINX_SERVER_NAME}" ]]; then
         SERVER_NAME="${NGINX_SERVER_NAME}"
     else
-        SERVER_NAME=$(hostname -f 2>/dev/null || hostname 2>/dev/null || echo "localhost")
-        log_warn "nginx server_name defaulted to '${SERVER_NAME}' — pass --server-name <public-fqdn> for production"
+        log_error "--server-name <FQDN> is required before nginx configure"
+        exit 1
     fi
 
     # Keep Laravel APP_URL aligned with public FQDN. Leaving http://localhost breaks Livewire
@@ -1568,6 +1600,18 @@ main() {
     echo "╚══════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
     echo
+
+    require_server_name
+    if [[ "$ENABLE_LETSENCRYPT" == "true" ]]; then
+        if [[ -z "$LE_EMAIL" && -n "$ADMIN_EMAIL" ]]; then
+            LE_EMAIL="$ADMIN_EMAIL"
+            log_warn "Using --admin-email for Let's Encrypt (--email not set)"
+        fi
+        if [[ -z "$LE_EMAIL" ]]; then
+            log_error "--letsencrypt requires --email <address> (ACME contact)"
+            exit 1
+        fi
+    fi
     
     if [[ "$SKIP_PREREQS" != "true" ]]; then
         check_prerequisites
@@ -1591,7 +1635,53 @@ main() {
     test_database_connection
     run_migrations
     create_admin_user
+    setup_admin_sudoers
+    if [[ "$ENABLE_LETSENCRYPT" == "true" ]]; then
+        enable_letsencrypt
+    fi
     display_summary
+}
+
+setup_admin_sudoers() {
+    log_info "Configuring sudoers for Fail2ban + Certificates panel..."
+    chmod +x "${INSTALL_DIR}/scripts/le-admin-cert.sh" 2>/dev/null || true
+    local edge_sudoers=""
+    for candidate in \
+        "${INSTALL_DIR}/../pbx3sbc/scripts/setup-admin-panel-sudoers.sh" \
+        "/home/ubuntu/pbx3sbc/scripts/setup-admin-panel-sudoers.sh" \
+        "/opt/pbx3sbc/scripts/setup-admin-panel-sudoers.sh"; do
+        if [[ -f "$candidate" ]]; then
+            edge_sudoers="$candidate"
+            break
+        fi
+    done
+    if [[ -n "$edge_sudoers" ]]; then
+        if sudo "$edge_sudoers"; then
+            log_success "Admin panel sudoers installed"
+        else
+            log_warn "sudoers setup failed — run later: sudo $edge_sudoers"
+        fi
+    else
+        log_warn "pbx3sbc setup-admin-panel-sudoers.sh not found — Fail2ban/LE panel sudo may be incomplete"
+        log_warn "Clone pbx3sbc alongside this repo and re-run that script"
+    fi
+}
+
+enable_letsencrypt() {
+    log_info "Issuing Let's Encrypt certificate for ${NGINX_SERVER_NAME}..."
+    log_warn "Requires DNS A → this host and SG TCP 80+443 from 0.0.0.0/0"
+    chmod +x "${INSTALL_DIR}/scripts/le-admin-cert.sh"
+    if sudo "${INSTALL_DIR}/scripts/le-admin-cert.sh" setup \
+        "${NGINX_SERVER_NAME}" \
+        "${LE_EMAIL}" \
+        "${INSTALL_DIR}/public"; then
+        log_success "HTTPS enabled — APP_URL=https://${NGINX_SERVER_NAME}"
+    else
+        log_error "Let's Encrypt setup failed"
+        log_info "HTTP admin remains; fix DNS/SG then use Filament → Certificates or:"
+        log_info "  sudo ${INSTALL_DIR}/scripts/le-admin-cert.sh setup ${NGINX_SERVER_NAME} ${LE_EMAIL} ${INSTALL_DIR}/public"
+        exit 1
+    fi
 }
 
 # Run main function
