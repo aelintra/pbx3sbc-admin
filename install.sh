@@ -17,6 +17,9 @@
 
 set -euo pipefail
 
+# Non-interactive when install is run via sudo (Filament deps).
+export COMPOSER_ALLOW_SUPERUSER="${COMPOSER_ALLOW_SUPERUSER:-1}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -953,7 +956,7 @@ install_dependencies() {
         # Run composer install and capture both stdout and stderr
         # Use a temporary file to capture output since command substitution might hang
         TEMP_OUTPUT=$(mktemp)
-        if $TIMEOUT_CMD composer install --no-interaction --no-plugins --prefer-dist --optimize-autoloader > "$TEMP_OUTPUT" 2>&1; then
+        if $TIMEOUT_CMD env COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --no-plugins --prefer-dist --optimize-autoloader > "$TEMP_OUTPUT" 2>&1; then
             INSTALL_EXIT=0
         else
             INSTALL_EXIT=$?
@@ -981,10 +984,10 @@ install_dependencies() {
             
             # Try composer update without optimize-autoloader first (less memory intensive)
             # We'll optimize after successful installation
-            if ! $TIMEOUT_CMD php -d memory_limit=-1 $(which composer) update --no-interaction --no-plugins --prefer-dist; then
+            if ! $TIMEOUT_CMD env COMPOSER_ALLOW_SUPERUSER=1 php -d memory_limit=-1 $(which composer) update --no-interaction --no-plugins --prefer-dist; then
                 log_warn "Composer update failed, trying with reduced memory optimization..."
                 # If that fails, try without any optimization flags
-                if ! $TIMEOUT_CMD php -d memory_limit=2G $(which composer) update --no-interaction --no-plugins --prefer-dist --no-scripts; then
+                if ! $TIMEOUT_CMD env COMPOSER_ALLOW_SUPERUSER=1 php -d memory_limit=2G $(which composer) update --no-interaction --no-plugins --prefer-dist --no-scripts; then
                     log_error "Failed to regenerate dependencies"
                     log_error "This may be due to insufficient system memory"
                     log_error "Please check your PHP version and composer.json requirements"
@@ -1000,7 +1003,7 @@ install_dependencies() {
             
             # Now optimize autoloader with the new lock file
             log_info "Optimizing autoloader..."
-            php -d memory_limit=-1 $(which composer) dump-autoload --optimize --no-interaction --quiet || true
+            env COMPOSER_ALLOW_SUPERUSER=1 php -d memory_limit=-1 $(which composer) dump-autoload --optimize --no-interaction --quiet || true
             
             log_success "Dependencies regenerated and installed successfully"
         elif [[ $INSTALL_EXIT -eq 124 ]]; then
@@ -1010,7 +1013,7 @@ install_dependencies() {
             exit 1
         elif [[ $INSTALL_EXIT -ne 0 ]]; then
             log_warn "Composer install failed (exit code: $INSTALL_EXIT). Trying update..."
-            if ! $TIMEOUT_CMD composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
+            if ! $TIMEOUT_CMD env COMPOSER_ALLOW_SUPERUSER=1 composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
                 log_error "Failed to install dependencies"
                 log_error "Please check your PHP version and composer.json requirements"
                 exit 1
@@ -1018,7 +1021,7 @@ install_dependencies() {
         fi
     else
         log_info "No composer.lock found. Installing dependencies..."
-        if ! $TIMEOUT_CMD composer install --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
+        if ! $TIMEOUT_CMD env COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
             log_error "Failed to install dependencies"
             exit 1
         fi
@@ -1141,20 +1144,14 @@ setup_environment() {
         fi
         
         if [[ -z "$DB_PORT" ]]; then
+            # Default without prompting — pass --db-port to override (greenfield is non-interactive).
             if [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
-                CURRENT_PORT=$(grep "^DB_PORT=" "$ENV_FILE" | cut -d'=' -f2)
-                echo -n "Database port [$CURRENT_PORT]: "
-            else
-                echo -n "Database port [3306]: "
-            fi
-            read -r input_db_port
-            if [[ -n "$input_db_port" ]]; then
-                DB_PORT="$input_db_port"
-            elif [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
-                DB_PORT="$CURRENT_PORT"
+                CURRENT_PORT=$(grep "^DB_PORT=" "$ENV_FILE" | cut -d'=' -f2 | tr -d '"' | tr -d "'" || true)
+                DB_PORT="${CURRENT_PORT:-3306}"
             else
                 DB_PORT="3306"
             fi
+            log_info "Database port: ${DB_PORT} (use --db-port to override)"
         fi
         
         # Update .env file
