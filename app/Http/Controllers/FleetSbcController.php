@@ -272,4 +272,48 @@ class FleetSbcController extends Controller
 
         return response()->json($result);
     }
+
+    /**
+     * Cold DR + warm-sync step 1: create local zip and upload to S3 (active VIP).
+     * Body: { upload?: bool } default true
+     */
+    public function backup(Request $request): JsonResponse
+    {
+        $upload = $request->has('upload') ? (bool) $request->boolean('upload') : true;
+        try {
+            $svc = app(\App\Services\SbcBackupService::class);
+            $role = $svc->vipRole();
+            if (! ($role['vip_holder'] ?? false)) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Backup via fleet API refused on standby — call the VIP / in-service member',
+                ], 409);
+            }
+            $result = $svc->create($upload);
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 500);
+        }
+
+        return response()->json(array_merge(['ok' => true], $result));
+    }
+
+    /**
+     * Warm-sync step 2: pull S3 stamp and restore --db-only (standby only).
+     * Body: { stamp?: string, restart?: bool }
+     */
+    public function warmPull(Request $request): JsonResponse
+    {
+        $stamp = trim((string) $request->input('stamp', ''));
+        $restart = $request->has('restart') ? (bool) $request->boolean('restart') : true;
+        try {
+            $svc = app(\App\Services\SbcBackupService::class);
+            $result = $svc->warmPull($stamp !== '' ? $stamp : null, $restart);
+        } catch (\Throwable $e) {
+            $code = str_contains($e->getMessage(), 'warm-pull refused') ? 409 : 500;
+
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], $code);
+        }
+
+        return response()->json($result);
+    }
 }
