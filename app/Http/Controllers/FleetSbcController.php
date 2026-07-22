@@ -316,4 +316,45 @@ class FleetSbcController extends Controller
 
         return response()->json($result);
     }
+
+    /**
+     * Phase D after EIP promote: issue/renew Let's Encrypt on the VIP holder.
+     * Body: { email?: string, fqdn?: string } — email falls back to PBX3_LE_EMAIL.
+     */
+    public function leSetup(Request $request): JsonResponse
+    {
+        try {
+            $svc = app(\App\Services\SbcBackupService::class);
+            $role = $svc->vipRole();
+            if (! ($role['vip_holder'] ?? false)) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'LE setup refused on standby — call the VIP / in-service member',
+                ], 409);
+            }
+
+            $email = trim((string) $request->input('email', ''));
+            if ($email === '') {
+                $email = trim((string) env('PBX3_LE_EMAIL', ''));
+            }
+            if ($email === '' || ! str_contains($email, '@')) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'email required (body.email or PBX3_LE_EMAIL)',
+                ], 422);
+            }
+
+            $fqdn = trim((string) $request->input('fqdn', ''));
+            $le = app(\App\Services\LetsEncryptService::class);
+            if ($fqdn === '') {
+                $fqdn = $le->fqdn();
+            }
+
+            $status = $le->setup($email, $fqdn !== '' ? $fqdn : null);
+
+            return response()->json(array_merge(['ok' => true], $status));
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
 }

@@ -120,6 +120,18 @@ server {
         try_files \$uri =404;
     }
 
+    # Fleet warm-sync hits member public IPs over HTTP (LE cert is FQDN-only).
+    location ^~ /api/ {
+        try_files \$uri /index.php?\$query_string;
+    }
+
+    location ~ ^/index\\.php(/|$) {
+        fastcgi_pass unix:${php_sock};
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+    }
+
     location / {
         return 301 https://\$host\$request_uri;
     }
@@ -213,7 +225,11 @@ cmd_setup() {
         echo "Error: nginx site pbx3sbc-admin missing — run admin install first" >&2
         exit 1
     fi
-    apt-get install -y -qq certbot >/dev/null
+    if ! command -v certbot >/dev/null 2>&1; then
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -qq
+        apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" certbot >/dev/null
+    fi
     certbot certonly --webroot \
         -w "$webroot" \
         -d "$fqdn" \

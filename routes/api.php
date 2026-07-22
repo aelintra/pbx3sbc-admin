@@ -15,4 +15,5 @@ Route::middleware(['fleet.token'])->prefix('fleet')->group(function () {
     Route::post('provision-node', [FleetSbcController::class, 'provisionNode']);
     Route::post('backup', [FleetSbcController::class, 'backup']);
     Route::post('warm-pull', [FleetSbcController::class, 'warmPull']);
+    Route::post('le-setup', [FleetSbcController::class, 'leSetup']);
 });
