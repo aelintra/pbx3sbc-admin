@@ -48,7 +48,7 @@ class SbcBackupService
     }
 
     /**
-     * @return list<array{name: string, path: string, backup_stamp: string, created_at: string, epoch: int, bytes: int}>
+     * @return list<array{name: string, path: string, backup_stamp: string, created_at: string, epoch: int, bytes: int, on_s3: bool}>
      */
     public function listLocal(): array
     {
@@ -70,13 +70,14 @@ class SbcBackupService
                 'created_at' => (string) ($row['created_at'] ?? ''),
                 'epoch' => (int) ($row['epoch'] ?? 0),
                 'bytes' => (int) ($row['bytes'] ?? 0),
+                'on_s3' => (bool) ($row['on_s3'] ?? false),
             ];
         }
 
         return $out;
     }
 
-/**
+    /**
      * @return array{zip: string, backup_stamp: string, epoch: int, uploaded: bool}
      */
     public function create(bool $upload = true): array

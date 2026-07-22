@@ -38,6 +38,27 @@ validate_email() {
     fi
 }
 
+# Prefer the PHP-FPM socket matching CLI `php` (composer platform), else highest versioned sock.
+# Do NOT use `ls php*-fpm.sock | head -1` — lexicographic order picks 8.3 before 8.4.
+detect_php_fpm_sock() {
+    local ver sock
+    ver="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || true)"
+    if [[ -n "$ver" ]]; then
+        for sock in "/run/php/php${ver}-fpm.sock" "/var/run/php/php${ver}-fpm.sock"; do
+            if [[ -S "$sock" ]]; then
+                echo "$sock"
+                return 0
+            fi
+        done
+    fi
+    sock="$(ls /run/php/php[0-9]*.sock /var/run/php/php[0-9]*.sock 2>/dev/null | sort -V | tail -1 || true)"
+    if [[ -n "$sock" && -S "$sock" ]]; then
+        echo "$sock"
+        return 0
+    fi
+    return 1
+}
+
 cmd_status() {
     local fqdn="$1"
     validate_fqdn "$fqdn"
@@ -85,7 +106,7 @@ cmd_apply_nginx() {
         exit 1
     fi
     if [[ -z "$php_sock" ]]; then
-        php_sock=$(ls /run/php/php*-fpm.sock 2>/dev/null | head -1 || true)
+        php_sock="$(detect_php_fpm_sock || true)"
     fi
     if [[ -z "$php_sock" || ! -S "$php_sock" ]]; then
         echo "Error: PHP-FPM socket not found" >&2
@@ -236,7 +257,7 @@ cmd_setup() {
         --non-interactive --agree-tos -m "$email" \
         --keep-until-expiring
     local php_sock
-    php_sock=$(ls /run/php/php*-fpm.sock 2>/dev/null | head -1 || true)
+    php_sock="$(detect_php_fpm_sock || true)"
     cmd_apply_nginx "$fqdn" "$webroot" "$php_sock"
     set_app_url_https "$fqdn" "$webroot"
     cmd_status "$fqdn"
@@ -272,7 +293,7 @@ cmd_custom_install() {
     chmod 640 /var/lib/pbx3sbc-admin/custom-tls/fullchain.pem /var/lib/pbx3sbc-admin/custom-tls/privkey.pem
     chown root:www-data /var/lib/pbx3sbc-admin/custom-tls/fullchain.pem /var/lib/pbx3sbc-admin/custom-tls/privkey.pem
     local php_sock
-    php_sock=$(ls /run/php/php*-fpm.sock 2>/dev/null | head -1 || true)
+    php_sock="$(detect_php_fpm_sock || true)"
     cmd_apply_nginx "$fqdn" "$webroot" "$php_sock" \
         /var/lib/pbx3sbc-admin/custom-tls/fullchain.pem \
         /var/lib/pbx3sbc-admin/custom-tls/privkey.pem
@@ -288,7 +309,7 @@ cmd_custom_remove() {
     rm -f /var/lib/pbx3sbc-admin/custom-tls/fullchain.pem /var/lib/pbx3sbc-admin/custom-tls/privkey.pem
     if [[ -f "/etc/letsencrypt/live/${fqdn}/fullchain.pem" ]]; then
         local php_sock
-        php_sock=$(ls /run/php/php*-fpm.sock 2>/dev/null | head -1 || true)
+        php_sock="$(detect_php_fpm_sock || true)"
         cmd_apply_nginx "$fqdn" "$webroot" "$php_sock"
         set_app_url_https "$fqdn" "$webroot"
         echo '{"installed":false,"fallback":"letsencrypt"}'

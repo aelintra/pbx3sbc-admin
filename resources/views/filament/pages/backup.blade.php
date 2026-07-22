@@ -88,7 +88,8 @@
                                 <th class="py-2 pr-4 font-medium">Created (UTC)</th>
                                 <th class="py-2 pr-4 font-medium">Archive ID</th>
                                 <th class="py-2 pr-4 font-medium">Local file</th>
-                                <th class="py-2 font-medium">Size</th>
+                                <th class="py-2 pr-4 font-medium">Size</th>
+                                <th class="py-2 font-medium">On S3?</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -97,7 +98,14 @@
                                     <td class="py-2 pr-4 text-gray-900">{{ $row['created_at'] ?: '—' }}</td>
                                     <td class="py-2 pr-4 font-mono text-xs text-gray-700">{{ $row['backup_stamp'] ?: '—' }}</td>
                                     <td class="py-2 pr-4 font-mono text-xs text-gray-700">{{ $row['name'] }}</td>
-                                    <td class="py-2 text-gray-700">{{ \App\Filament\Pages\Backup::formatBytes((int) $row['bytes']) }}</td>
+                                    <td class="py-2 pr-4 text-gray-700">{{ \App\Filament\Pages\Backup::formatBytes((int) $row['bytes']) }}</td>
+                                    <td class="py-2">
+                                        @if (! empty($row['on_s3']))
+                                            <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Yes</span>
+                                        @else
+                                            <span class="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">No</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
