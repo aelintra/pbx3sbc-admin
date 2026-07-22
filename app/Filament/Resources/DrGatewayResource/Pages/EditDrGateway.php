@@ -38,6 +38,8 @@ class EditDrGateway extends EditRecord
         $slug = $record->carrierSlug();
         $data['carrier_label'] = $slug !== '' ? ucwords(str_replace('-', ' ', $slug)) : '';
         $data['peer_role'] = $record->peerRole() ?: null;
+        $dialect = $record->numberDialect();
+        $data['number_dialect'] = $dialect !== '' ? $dialect : 'none';
 
         return $data;
     }

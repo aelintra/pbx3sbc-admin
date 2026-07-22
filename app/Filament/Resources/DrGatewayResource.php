@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\DrGatewayResource\Pages;
 use App\Models\DrGateway;
 use App\Models\DrRule;
+use App\Services\NumberDialect;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -57,7 +58,16 @@ class DrGatewayResource extends Resource
                                 DrGateway::ROLE_INBOUND => 'Inbound trust (is_from_gw)',
                                 DrGateway::ROLE_ASTERISK => 'Asterisk destination',
                             ])
+                            ->live()
                             ->helperText('Outbound: Prefer sip:fqdn:5060 (Route53). Inbound: literal signaling IPs. Asterisk: fleet node for DID delivery.'),
+                        Forms\Components\Select::make('number_dialect')
+                            ->label('Number dialect')
+                            ->options(NumberDialect::presetOptions())
+                            ->default(NumberDialect::PRESET_NONE)
+                            ->visible(fn (Forms\Get $get): bool => $get('peer_role') !== DrGateway::ROLE_ASTERISK)
+                            ->helperText(fn (Forms\Get $get): string => implode(' · ', NumberDialect::examples($get('number_dialect'))))
+                            ->live()
+                            ->columnSpanFull(),
                         Forms\Components\TextInput::make('address')
                             ->label('SIP address')
                             ->required()
@@ -115,7 +125,7 @@ class DrGatewayResource extends Resource
                             ->label('attrs (raw)')
                             ->maxLength(255)
                             ->nullable()
-                            ->helperText('Escape hatch. Carrier/Role above write carrier= and role=; other keys are preserved on save.')
+                            ->helperText('Escape hatch. Carrier/Role/Dialect above write carrier=, role=, dialect=; other keys are preserved on save.')
                             ->columnSpanFull(),
                     ])
                     ->columns(2),
@@ -141,6 +151,23 @@ class DrGatewayResource extends Resource
                         DrGateway::ROLE_INBOUND => 'warning',
                         DrGateway::ROLE_ASTERISK => 'success',
                         default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('number_dialect_badge')
+                    ->label('Dialect')
+                    ->badge()
+                    ->state(function (DrGateway $record): string {
+                        if ($record->peerRole() === DrGateway::ROLE_ASTERISK) {
+                            return '—';
+                        }
+                        $d = $record->numberDialect();
+
+                        return $d !== '' ? $d : 'none';
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        '—', 'none' => 'gray',
+                        'uk-magrathea', 'uk-gamma' => 'success',
+                        'strict-plus-e164' => 'info',
+                        default => 'warning',
                     }),
                 Tables\Columns\TextColumn::make('address')
                     ->label('SIP address')
@@ -253,13 +280,15 @@ class DrGatewayResource extends Resource
     {
         $label = $data['carrier_label'] ?? null;
         $role = $data['peer_role'] ?? null;
-        unset($data['carrier_label'], $data['peer_role']);
+        $dialect = $data['number_dialect'] ?? null;
+        unset($data['carrier_label'], $data['peer_role'], $data['number_dialect']);
 
         $gw = new DrGateway;
         $gw->attrs = $data['attrs'] ?? null;
         $gw->setCarrierAttrs(
             is_string($label) ? $label : null,
-            is_string($role) ? $role : null
+            is_string($role) ? $role : null,
+            is_string($dialect) ? $dialect : null
         );
         $data['attrs'] = $gw->attrs;
 

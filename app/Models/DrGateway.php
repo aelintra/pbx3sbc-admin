@@ -146,7 +146,7 @@ class DrGateway extends Model
     /**
      * Merge carrier + role into attrs; preserve other keys.
      */
-    public function setCarrierAttrs(?string $carrierLabelOrSlug, ?string $role): void
+    public function setCarrierAttrs(?string $carrierLabelOrSlug, ?string $role, ?string $dialect = null): void
     {
         $pairs = self::parseAttrs($this->attrs);
         $slug = self::normalizeCarrierSlug($carrierLabelOrSlug);
@@ -163,7 +163,26 @@ class DrGateway extends Model
             unset($pairs['role']);
         }
 
+        // Asterisk destinations do not speak carrier dialects.
+        if ($role === self::ROLE_ASTERISK) {
+            unset($pairs['dialect']);
+        } elseif ($dialect !== null) {
+            $dialect = trim($dialect);
+            if ($dialect !== '' && $dialect !== 'none') {
+                $pairs['dialect'] = $dialect;
+            } else {
+                unset($pairs['dialect']);
+            }
+        }
+
         $this->attrs = self::formatAttrs($pairs) ?: null;
+    }
+
+    public function numberDialect(): string
+    {
+        $parsed = self::parseAttrs($this->attrs);
+
+        return (string) ($parsed['dialect'] ?? '');
     }
 
     public static function optionsForSelect(): array
