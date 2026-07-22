@@ -134,21 +134,17 @@ class SbcBackupService
             throw new RuntimeException($err);
         }
         $out = trim($result->output());
-        // Scripts may log to stdout before JSON — take last JSON object line
+        // Prefer last complete JSON object (scripts may log to stdout before jq -c)
         $jsonLine = $out;
         if ($out !== '' && ($out[0] ?? '') !== '{') {
-            $lines = preg_split('/\R/', $out) ?: [];
-            foreach (array_reverse($lines) as $line) {
-                $line = trim($line);
-                if ($line !== '' && str_starts_with($line, '{')) {
-                    $jsonLine = $line;
-                    break;
-                }
+            $pos = strrpos($out, '{');
+            if ($pos !== false) {
+                $jsonLine = substr($out, $pos);
             }
         }
         $decoded = json_decode($jsonLine, true);
         if (! is_array($decoded)) {
-            throw new RuntimeException('sbc-backup-panel: invalid JSON: '.$jsonLine);
+            throw new RuntimeException('sbc-backup-panel: invalid JSON: '.substr($jsonLine, 0, 120));
         }
 
         return $decoded;
