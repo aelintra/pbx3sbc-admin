@@ -47,7 +47,11 @@ class FleetNodeProvisioner
 
     public static function nextGwid(): string
     {
-        return (string) ((int) (DrGateway::query()->max('gwid') ?? 0) + 1);
+        $max = (int) (DrGateway::query()
+            ->selectRaw('MAX(CAST(gwid AS UNSIGNED)) as m')
+            ->value('m') ?? 0);
+
+        return (string) ($max + 1);
     }
 
     public static function fleetDispatcherAttrs(string $instanceId, ?string $sourceIp = null): string

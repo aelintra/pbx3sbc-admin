@@ -97,7 +97,13 @@ class DrGatewayResource extends Resource
                             ->required()
                             ->maxLength(64)
                             ->unique(ignoreRecord: true)
-                            ->default(fn () => (string) ((int) (DrGateway::query()->max('gwid') ?? 0) + 1))
+                            ->default(function () {
+                                $max = (int) (DrGateway::query()
+                                    ->selectRaw('MAX(CAST(gwid AS UNSIGNED)) as m')
+                                    ->value('m') ?? 0);
+
+                                return (string) ($max + 1);
+                            })
                             ->helperText('Auto-assigned for new peers. Stored in OpenSIPS dr_gateways; rarely edited by hand.'),
                         Forms\Components\TextInput::make('type')
                             ->numeric()
