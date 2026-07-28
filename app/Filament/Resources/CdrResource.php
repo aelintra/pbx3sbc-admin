@@ -8,6 +8,7 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Filters\Filter;
@@ -103,73 +104,77 @@ class CdrResource extends Resource
             ])
             ->filters([
                 Filter::make('created')
+                    ->label('Date range')
+                    ->columnSpanFull()
                     ->form([
-                        Forms\Components\DatePicker::make('created_from_date')
-                            ->label('Start Date')
-                            ->default(now()->format('Y-m-d')),
-                        Forms\Components\TextInput::make('created_from_time')
-                            ->label('Start Time (HH:MM)')
-                            ->placeholder('00:00')
-                            ->default('00:00')
-                            ->mask('99:99')
-                            ->rules(['regex:/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/'])
-                            ->helperText('24-hour format (e.g., 09:30, 14:15)')
-                            ->live(),
-                        Forms\Components\DatePicker::make('created_until_date')
-                            ->label('End Date')
-                            ->default(now()->format('Y-m-d'))
-                            ->rules([
-                                function ($get) {
-                                    return function (string $attribute, $value, \Closure $fail) use ($get) {
-                                        $startDate = $get('created_from_date');
-                                        $startTime = $get('created_from_time');
-                                        $endTime = $get('created_until_time');
-                                        
-                                        if ($startDate && $value && $startTime && $endTime) {
-                                            $startDateTime = $startDate . ' ' . $startTime . ':00';
-                                            $endDateTime = $value . ' ' . $endTime . ':59';
-                                            
-                                            if (strtotime($startDateTime) >= strtotime($endDateTime)) {
-                                                $fail('End date/time must be after start date/time.');
-                                            }
-                                        }
-                                    };
-                                },
+                        Forms\Components\Grid::make(4)
+                            ->schema([
+                                Forms\Components\DatePicker::make('created_from_date')
+                                    ->label('Start date')
+                                    ->placeholder('Any')
+                                    ->native(false)
+                                    ->displayFormat('Y-m-d'),
+                                Forms\Components\TextInput::make('created_from_time')
+                                    ->label('Start time')
+                                    ->placeholder('00:00')
+                                    ->mask('99:99')
+                                    ->rules(['nullable', 'regex:/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/']),
+                                Forms\Components\DatePicker::make('created_until_date')
+                                    ->label('End date')
+                                    ->placeholder('Any')
+                                    ->native(false)
+                                    ->displayFormat('Y-m-d')
+                                    ->rules([
+                                        function ($get) {
+                                            return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                                $startDate = $get('created_from_date');
+                                                $startTime = $get('created_from_time') ?: '00:00';
+                                                $endTime = $get('created_until_time') ?: '23:59';
+
+                                                if ($startDate && $value) {
+                                                    $startDateTime = $startDate.' '.$startTime.':00';
+                                                    $endDateTime = $value.' '.$endTime.':59';
+
+                                                    if (strtotime($startDateTime) >= strtotime($endDateTime)) {
+                                                        $fail('End date/time must be after start date/time.');
+                                                    }
+                                                }
+                                            };
+                                        },
+                                    ]),
+                                Forms\Components\TextInput::make('created_until_time')
+                                    ->label('End time')
+                                    ->placeholder('23:59')
+                                    ->mask('99:99')
+                                    ->rules([
+                                        'nullable',
+                                        'regex:/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/',
+                                        function ($get) {
+                                            return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                                $startDate = $get('created_from_date');
+                                                $endDate = $get('created_until_date');
+                                                if (! $startDate || ! $endDate) {
+                                                    return;
+                                                }
+                                                $startTime = $get('created_from_time') ?: '00:00';
+                                                $endTime = $value ?: '23:59';
+
+                                                $startTimeParts = explode(':', $startTime);
+                                                $startTimeNormalized = str_pad($startTimeParts[0], 2, '0', STR_PAD_LEFT).':'.str_pad($startTimeParts[1] ?? '00', 2, '0', STR_PAD_LEFT);
+
+                                                $endTimeParts = explode(':', $endTime);
+                                                $endTimeNormalized = str_pad($endTimeParts[0], 2, '0', STR_PAD_LEFT).':'.str_pad($endTimeParts[1] ?? '00', 2, '0', STR_PAD_LEFT);
+
+                                                $startDateTime = $startDate.' '.$startTimeNormalized.':00';
+                                                $endDateTime = $endDate.' '.$endTimeNormalized.':59';
+
+                                                if (strtotime($startDateTime) >= strtotime($endDateTime)) {
+                                                    $fail('End time must be after start time.');
+                                                }
+                                            };
+                                        },
+                                    ]),
                             ]),
-                        Forms\Components\TextInput::make('created_until_time')
-                            ->label('End Time (HH:MM)')
-                            ->placeholder('23:59')
-                            ->default('23:59')
-                            ->mask('99:99')
-                            ->rules([
-                                'regex:/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/',
-                                function ($get) {
-                                    return function (string $attribute, $value, \Closure $fail) use ($get) {
-                                        $startDate = $get('created_from_date');
-                                        $startTime = $get('created_from_time');
-                                        $endDate = $get('created_until_date');
-                                        
-                                        // Only validate if all fields are filled
-                                        if ($startDate && $endDate && $startTime && $value) {
-                                            // Normalize times
-                                            $startTimeParts = explode(':', $startTime);
-                                            $startTimeNormalized = str_pad($startTimeParts[0], 2, '0', STR_PAD_LEFT) . ':' . str_pad($startTimeParts[1] ?? '00', 2, '0', STR_PAD_LEFT);
-                                            
-                                            $endTimeParts = explode(':', $value);
-                                            $endTimeNormalized = str_pad($endTimeParts[0], 2, '0', STR_PAD_LEFT) . ':' . str_pad($endTimeParts[1] ?? '00', 2, '0', STR_PAD_LEFT);
-                                            
-                                            $startDateTime = $startDate . ' ' . $startTimeNormalized . ':00';
-                                            $endDateTime = $endDate . ' ' . $endTimeNormalized . ':59';
-                                            
-                                            if (strtotime($startDateTime) >= strtotime($endDateTime)) {
-                                                $fail('End time must be after start time.');
-                                            }
-                                        }
-                                    };
-                                },
-                            ])
-                            ->helperText('24-hour format (e.g., 17:45, 23:59)')
-                            ->live(),
                     ])
                     ->indicateUsing(function (array $data): ?string {
                         $parts = [];
@@ -177,111 +182,81 @@ class CdrResource extends Resource
                         $startTime = $data['created_from_time'] ?? null;
                         $endDate = $data['created_until_date'] ?? null;
                         $endTime = $data['created_until_time'] ?? null;
-                        
-                        if ($startDate || $startTime) {
-                            $date = $startDate ?? 'today';
-                            $time = $startTime ?? '00:00';
+
+                        // Only indicate when a date bound is set (times alone do not filter).
+                        if ($startDate) {
+                            $time = $startTime ?: '00:00';
                             if ($time instanceof \DateTimeInterface) {
                                 $time = $time->format('H:i');
                             }
-                            $parts[] = "From: {$date} {$time}";
+                            $parts[] = "From: {$startDate} {$time}";
                         }
-                        if ($endDate || $endTime) {
-                            $date = $endDate ?? 'today';
-                            $time = $endTime ?? '23:59';
+                        if ($endDate) {
+                            $time = $endTime ?: '23:59';
                             if ($time instanceof \DateTimeInterface) {
                                 $time = $time->format('H:i');
                             }
-                            $parts[] = "To: {$date} {$time}";
+                            $parts[] = "To: {$endDate} {$time}";
                         }
-                        
-                        // Check if range is invalid and add prominent warning
-                        if (!empty($parts)) {
-                            $startDateCheck = $startDate ?: now()->format('Y-m-d');
+
+                        if ($startDate && $endDate) {
                             $startTimeCheck = $startTime ?: '00:00';
-                            $endDateCheck = $endDate ?: now()->format('Y-m-d');
                             $endTimeCheck = $endTime ?: '23:59';
-                            
-                            if ($startTimeCheck && $endTimeCheck) {
-                                // Normalize times for comparison
-                                $startParts = explode(':', $startTimeCheck);
-                                $startNormalized = str_pad($startParts[0], 2, '0', STR_PAD_LEFT) . ':' . str_pad($startParts[1] ?? '00', 2, '0', STR_PAD_LEFT);
-                                $endParts = explode(':', $endTimeCheck);
-                                $endNormalized = str_pad($endParts[0], 2, '0', STR_PAD_LEFT) . ':' . str_pad($endParts[1] ?? '00', 2, '0', STR_PAD_LEFT);
-                                
-                                $startDateTime = $startDateCheck . ' ' . $startNormalized . ':00';
-                                $endDateTime = $endDateCheck . ' ' . $endNormalized . ':59';
-                                
-                                if (strtotime($startDateTime) >= strtotime($endDateTime)) {
-                                    $parts[] = "❌ INVALID RANGE";
-                                }
+                            $startParts = explode(':', (string) $startTimeCheck);
+                            $startNormalized = str_pad($startParts[0], 2, '0', STR_PAD_LEFT).':'.str_pad($startParts[1] ?? '00', 2, '0', STR_PAD_LEFT);
+                            $endParts = explode(':', (string) $endTimeCheck);
+                            $endNormalized = str_pad($endParts[0], 2, '0', STR_PAD_LEFT).':'.str_pad($endParts[1] ?? '00', 2, '0', STR_PAD_LEFT);
+
+                            $startDateTime = $startDate.' '.$startNormalized.':00';
+                            $endDateTime = $endDate.' '.$endNormalized.':59';
+
+                            if (strtotime($startDateTime) >= strtotime($endDateTime)) {
+                                $parts[] = '❌ INVALID RANGE';
                             }
                         }
-                        
-                        return !empty($parts) ? implode(', ', $parts) : null;
+
+                        return ! empty($parts) ? implode(', ', $parts) : null;
                     })
                     ->query(function (Builder $query, array $data): Builder {
-                        // Handle start date/time
                         $startDate = $data['created_from_date'] ?? null;
                         $startTime = $data['created_from_time'] ?? null;
-                        
-                        // Convert time to string if it's a DateTime/Carbon object
+                        $endDate = $data['created_until_date'] ?? null;
+                        $endTime = $data['created_until_time'] ?? null;
+
                         if ($startTime instanceof \DateTimeInterface) {
                             $startTime = $startTime->format('H:i');
                         }
-                        
-                        $startDateTime = null;
-                        // Apply filter if either date or time is provided
-                        if ($startDate || $startTime) {
-                            // Use provided date or default to today
-                            $date = $startDate ?: now()->format('Y-m-d');
-                            // Use provided time or default to start of day
-                            $time = $startTime ?: '00:00';
-                            
-                            // Normalize time format to HH:MM
-                            if (is_string($time)) {
-                                $timeParts = explode(':', $time);
-                                $time = str_pad($timeParts[0], 2, '0', STR_PAD_LEFT) . ':' . str_pad($timeParts[1] ?? '00', 2, '0', STR_PAD_LEFT);
-                            }
-                            
-                            $startDateTime = $date . ' ' . $time . ':00';
-                            $query->where('created', '>=', $startDateTime);
-                        }
-                        
-                        // Handle end date/time
-                        $endDate = $data['created_until_date'] ?? null;
-                        $endTime = $data['created_until_time'] ?? null;
-                        
-                        // Convert time to string if it's a DateTime/Carbon object
                         if ($endTime instanceof \DateTimeInterface) {
                             $endTime = $endTime->format('H:i');
                         }
-                        
-                        $endDateTime = null;
-                        // Apply filter if either date or time is provided
-                        if ($endDate || $endTime) {
-                            // Use provided date or default to today
-                            $date = $endDate ?: now()->format('Y-m-d');
-                            // Use provided time or default to end of day
-                            $time = $endTime ?: '23:59';
-                            
-                            // Normalize time format to HH:MM
+
+                        // Empty date range = all records (Reset clears dates).
+                        $startDateTime = null;
+                        if (filled($startDate)) {
+                            $time = filled($startTime) ? $startTime : '00:00';
                             if (is_string($time)) {
                                 $timeParts = explode(':', $time);
-                                $time = str_pad($timeParts[0], 2, '0', STR_PAD_LEFT) . ':' . str_pad($timeParts[1] ?? '59', 2, '0', STR_PAD_LEFT);
+                                $time = str_pad($timeParts[0], 2, '0', STR_PAD_LEFT).':'.str_pad($timeParts[1] ?? '00', 2, '0', STR_PAD_LEFT);
                             }
-                            
-                            $endDateTime = $date . ' ' . $time . ':59';
-                            
-                            // Validate that end is after start
+                            $startDateTime = $startDate.' '.$time.':00';
+                            $query->where('created', '>=', $startDateTime);
+                        }
+
+                        if (filled($endDate)) {
+                            $time = filled($endTime) ? $endTime : '23:59';
+                            if (is_string($time)) {
+                                $timeParts = explode(':', $time);
+                                $time = str_pad($timeParts[0], 2, '0', STR_PAD_LEFT).':'.str_pad($timeParts[1] ?? '59', 2, '0', STR_PAD_LEFT);
+                            }
+                            $endDateTime = $endDate.' '.$time.':59';
+
                             if ($startDateTime && strtotime($startDateTime) >= strtotime($endDateTime)) {
-                                // Return empty result set if invalid range
                                 return $query->whereRaw('1 = 0');
                             }
-                            
+
                             $query->where('created', '<=', $endDateTime);
                         }
-                        
+
                         return $query;
                     }),
                 Filter::make('from_uri')
@@ -345,7 +320,11 @@ class CdrResource extends Resource
                     ->label('Failed Calls Only')
                     ->query(fn (Builder $query): Builder => $query->failed())
                     ->toggle(),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->filtersFormColumns(3)
+            ->deferFilters()
+            ->filtersApplyAction(fn (Tables\Actions\Action $action) => $action->label('Apply filters'))
+            ->hiddenFilterIndicators()
             ->actions([
                 Tables\Actions\ViewAction::make(),
             ])
