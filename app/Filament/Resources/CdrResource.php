@@ -298,13 +298,18 @@ class CdrResource extends Resource
                         );
                     }),
                 Filter::make('duration')
+                    ->label('Duration')
+                    ->columnSpanFull()
                     ->form([
-                        Forms\Components\TextInput::make('duration_min')
-                            ->label('Min Duration (seconds)')
-                            ->numeric(),
-                        Forms\Components\TextInput::make('duration_max')
-                            ->label('Max Duration (seconds)')
-                            ->numeric(),
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('duration_min')
+                                    ->label('Min duration (seconds)')
+                                    ->numeric(),
+                                Forms\Components\TextInput::make('duration_max')
+                                    ->label('Max duration (seconds)')
+                                    ->numeric(),
+                            ]),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->durationRange(
