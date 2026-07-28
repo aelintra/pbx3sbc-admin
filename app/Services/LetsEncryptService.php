@@ -33,7 +33,7 @@ class LetsEncryptService
     }
 
     /**
-     * @return array{configured: bool, domain?: string, expires_at?: string|null, issuer?: string|null}
+     * @return array{configured: bool, domain?: string, expires_at?: string|null, issuer?: string|null, cert_sans?: list<string>}
      */
     public function status(?string $fqdn = null): array
     {
@@ -41,7 +41,7 @@ class LetsEncryptService
         $result = $this->run(['status', $fqdn]);
         $decoded = json_decode($result, true);
 
-        return is_array($decoded) ? $decoded : ['configured' => false, 'domain' => $fqdn];
+        return is_array($decoded) ? $decoded : ['configured' => false, 'domain' => $fqdn, 'cert_sans' => []];
     }
 
     /**

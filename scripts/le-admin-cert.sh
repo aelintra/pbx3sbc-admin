@@ -64,16 +64,39 @@ cmd_status() {
     validate_fqdn "$fqdn"
     local live="/etc/letsencrypt/live/${fqdn}"
     if [[ ! -f "${live}/fullchain.pem" ]]; then
-        printf '{"configured":false,"domain":%s}\n' "$(json_escape "$fqdn")"
+        printf '{"configured":false,"domain":%s,"cert_sans":[]}\n' "$(json_escape "$fqdn")"
         return 0
     fi
-    local expires issuer
-    expires=$(openssl x509 -in "${live}/fullchain.pem" -noout -enddate 2>/dev/null | sed 's/^notAfter=//' || true)
-    issuer=$(openssl x509 -in "${live}/fullchain.pem" -noout -issuer 2>/dev/null | sed 's/^issuer=//' || true)
-    printf '{"configured":true,"domain":%s,"expires_at":%s,"issuer":%s}\n' \
+    local pem="${live}/fullchain.pem"
+    local expires_raw expires issuer sans_json
+    expires_raw=$(openssl x509 -in "$pem" -noout -enddate 2>/dev/null | sed 's/^notAfter=//' || true)
+    # SPA kinship: Y-m-d (UTC)
+    expires=""
+    if [[ -n "$expires_raw" ]]; then
+        expires=$(date -u -d "$expires_raw" +%Y-%m-%d 2>/dev/null || date -u -j -f "%b %d %T %Y %Z" "$expires_raw" +%Y-%m-%d 2>/dev/null || printf '%s' "$expires_raw")
+    fi
+    issuer=$(openssl x509 -in "$pem" -noout -issuer 2>/dev/null | sed 's/^issuer=//' || true)
+    # DNS SANs → JSON array (fall back to CN/fqdn)
+    sans_json="["
+    local comma="" dns
+    while IFS= read -r dns; do
+        [[ -z "$dns" ]] && continue
+        sans_json+="${comma}$(json_escape "$dns")"
+        comma=","
+    done < <(openssl x509 -in "$pem" -noout -ext subjectAltName 2>/dev/null \
+        | tr ',' '\n' \
+        | sed -n 's/.*DNS:\s*//p' \
+        | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+        || true)
+    if [[ "$sans_json" == "[" ]]; then
+        sans_json+="$(json_escape "$fqdn")"
+    fi
+    sans_json+="]"
+    printf '{"configured":true,"domain":%s,"expires_at":%s,"issuer":%s,"cert_sans":%s}\n' \
         "$(json_escape "$fqdn")" \
         "$(json_escape "${expires:-}")" \
-        "$(json_escape "${issuer:-}")"
+        "$(json_escape "${issuer:-}")" \
+        "$sans_json"
 }
 
 ensure_ssl_snippets() {

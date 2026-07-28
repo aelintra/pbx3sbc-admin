@@ -1,5 +1,25 @@
 {{-- SPA CertificatesView kinship (single FQDN; no tenant SAN sync). --}}
 <x-filament-panels::page>
+    <style>
+        /* Match pbx3spa CertificatesView .cert-dl (label | value on one row).
+           Avoid Tailwind arbitrary grid classes — Filament theme may purge them. */
+        .certificates-view .cert-dl {
+            margin: 0.5rem 0 1rem;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.25rem 1.5rem;
+            max-width: 32rem;
+        }
+        .certificates-view .cert-dl dt {
+            margin: 0;
+            font-weight: 600;
+            color: #334155;
+        }
+        .certificates-view .cert-dl dd {
+            margin: 0;
+            color: #0f172a;
+        }
+    </style>
     <div class="certificates-view space-y-8">
         @if ($activeLabel)
             <p class="active-line text-base text-gray-800">
@@ -36,13 +56,24 @@
             @elseif ($leError)
                 <p class="text-sm text-danger-600">{{ $leError }}</p>
             @elseif (($leStatus['configured'] ?? false) === true)
-                <dl class="cert-dl grid max-w-xl grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
-                    <dt class="font-semibold text-slate-700">Hostname</dt>
+                @php
+                    $certCovers = $leStatus['cert_sans'] ?? [];
+                    if (! is_array($certCovers)) {
+                        $certCovers = [];
+                    }
+                    $certCovers = array_values(array_filter(array_map('strval', $certCovers)));
+                @endphp
+                <dl class="cert-dl text-sm">
+                    <dt>Hostname</dt>
                     <dd>{{ $leStatus['domain'] ?? $leSetupFqdn }}</dd>
-                    <dt class="font-semibold text-slate-700">Expires</dt>
+                    @if (count($certCovers) > 0)
+                        <dt>Cert covers</dt>
+                        <dd>{{ implode(', ', $certCovers) }}</dd>
+                    @endif
+                    <dt>Expires</dt>
                     <dd>{{ $leStatus['expires_at'] ?? '—' }}</dd>
-                    <dt class="font-semibold text-slate-700">Issuer</dt>
-                    <dd class="break-all">{{ $leStatus['issuer'] ?? '—' }}</dd>
+                    <dt>Issuer</dt>
+                    <dd>{{ $leStatus['issuer'] ?? '—' }}</dd>
                 </dl>
                 <p class="section-help text-sm text-slate-600">
                     <strong>Renew now</strong> extends expiry for this hostname. (Unlike the instance SPA,

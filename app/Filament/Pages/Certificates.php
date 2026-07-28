@@ -24,7 +24,9 @@ class Certificates extends Page
 
     protected static ?string $title = 'Certificates';
 
-    protected static ?int $navigationSort = 90;
+    protected static ?string $navigationGroup = 'System';
+
+    protected static ?int $navigationSort = 50;
 
     public string $activeLabel = '';
 
