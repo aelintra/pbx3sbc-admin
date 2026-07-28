@@ -62,10 +62,11 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::SIDEBAR_FOOTER,
                 fn (): string => Blade::render('@include(\'filament.hooks.sidebar-footer\')'),
             )
-            // Most-used ops first (Peering then Routing); Fail2Ban then Logs at the bottom.
+            // Most-used ops first (Peering then Routing); System (backups/certs); Fail2Ban then Logs.
             ->navigationGroups([
                 NavigationGroup::make('Peering'),
                 NavigationGroup::make('Routing'),
+                NavigationGroup::make('System'),
                 NavigationGroup::make('Fail2Ban'),
                 NavigationGroup::make('Logs'),
             ])

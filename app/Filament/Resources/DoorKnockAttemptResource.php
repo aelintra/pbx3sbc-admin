@@ -6,6 +6,7 @@ use App\Filament\Resources\DoorKnockAttemptResource\Pages;
 use App\Models\DoorKnockAttempt;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Resources\Pages\ViewRecord;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -59,6 +60,19 @@ class DoorKnockAttemptResource extends Resource
                 Forms\Components\DateTimePicker::make('attempt_time')
                     ->label('Attempt Time')
                     ->disabled(),
+                Forms\Components\Section::make('Geographic origin')
+                    ->schema([
+                        Forms\Components\View::make('filament.forms.components.door-knock-geo')
+                            ->viewData(function ($livewire) {
+                                $record = method_exists($livewire, 'getRecord') ? $livewire->getRecord() : null;
+
+                                return [
+                                    'sourceIp' => $record?->source_ip,
+                                ];
+                            }),
+                    ])
+                    ->columnSpanFull()
+                    ->visible(fn ($livewire) => $livewire instanceof ViewRecord),
             ]);
     }
 

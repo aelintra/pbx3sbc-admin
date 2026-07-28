@@ -16,9 +16,9 @@ class Backup extends Page
 
     protected static string $view = 'filament.pages.backup';
 
-    protected static ?string $navigationLabel = 'Backup';
+    protected static ?string $navigationLabel = 'Backups';
 
-    protected static ?string $title = 'Backup';
+    protected static ?string $title = 'Backups';
 
     protected static ?string $navigationGroup = 'System';
 
