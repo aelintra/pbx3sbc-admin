@@ -185,14 +185,14 @@ class CallRouteResource extends Resource
                             ->required()
                             ->maxLength(192)
                             ->rules([
-                                'regex:/^sip:((\[([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\]|([0-9]{1,3}\.){3}[0-9]{1,3}|([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}))(:[0-9]{1,5})?$/',
+                                'regex:'.\App\Support\SipIpUri::REGEX,
                             ])
                             ->validationMessages([
-                                'regex' => 'The destination must start with "sip:" followed by an IP address or domain name (e.g., sip:192.168.1.100:5060).',
+                                'regex' => \App\Support\SipIpUri::MESSAGE,
                             ])
                             ->label('SIP URI')
                             ->placeholder('sip:192.168.1.100:5060')
-                            ->helperText('Format: sip:host:port'),
+                            ->helperText('Literal IP only (sip:a.b.c.d:5060). DNS names break Asterisk reverse-IP lookup.'),
 
                         Forms\Components\TextInput::make('weight')
                             ->numeric()

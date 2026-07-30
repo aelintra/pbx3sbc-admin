@@ -59,7 +59,7 @@ class DrGatewayResource extends Resource
                                 DrGateway::ROLE_ASTERISK => 'Asterisk destination',
                             ])
                             ->live()
-                            ->helperText('Outbound: Prefer sip:fqdn:5060 (Route53). Inbound: literal signaling IPs. Asterisk: fleet node for DID delivery.'),
+                            ->helperText('Outbound: Prefer sip:fqdn:5060 (Route53). Inbound: literal signaling IPs. Asterisk: fleet node IP only (no DNS).'),
                         Forms\Components\Select::make('number_dialect')
                             ->label('Number dialect')
                             ->options(NumberDialect::presetOptions())
@@ -72,12 +72,27 @@ class DrGatewayResource extends Resource
                             ->label('SIP address')
                             ->required()
                             ->maxLength(128)
-                            ->placeholder('sip:sipipgw.magrathea.net:5060')
-                            ->rules(['regex:/^sip:.+/'])
-                            ->validationMessages([
-                                'regex' => 'Address must be a SIP URI starting with sip:',
+                            ->placeholder(fn (Forms\Get $get): string => $get('peer_role') === DrGateway::ROLE_ASTERISK
+                                ? 'sip:54.236.153.81:5060'
+                                : 'sip:sipipgw.magrathea.net:5060')
+                            ->rules([
+                                fn (Forms\Get $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get): void {
+                                    $uri = is_string($value) ? trim($value) : '';
+                                    if ($get('peer_role') === DrGateway::ROLE_ASTERISK) {
+                                        if (! \App\Support\SipIpUri::isValid($uri)) {
+                                            $fail(\App\Support\SipIpUri::MESSAGE);
+                                        }
+
+                                        return;
+                                    }
+                                    if ($uri === '' || ! str_starts_with(strtolower($uri), 'sip:')) {
+                                        $fail('Address must be a SIP URI starting with sip:');
+                                    }
+                                },
                             ])
-                            ->helperText('FQDN for outbound when the carrier uses DNS; IPs for inbound allow lists.')
+                            ->helperText(fn (Forms\Get $get): string => $get('peer_role') === DrGateway::ROLE_ASTERISK
+                                ? 'Asterisk Peer / Number-route destination: literal IP only (DNS breaks reverse-IP lookup).'
+                                : 'FQDN for outbound when the carrier uses DNS; IPs for inbound allow lists.')
                             ->columnSpanFull(),
                         Forms\Components\Select::make('state')
                             ->options([
