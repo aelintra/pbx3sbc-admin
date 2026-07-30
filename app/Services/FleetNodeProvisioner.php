@@ -12,7 +12,8 @@ use App\Models\DrGateway;
 class FleetNodeProvisioner
 {
     /**
-     * Normalize to sip:host:port (lowercase). Accepts sip:… or host[:port].
+     * Normalize to sip:IP:port (lowercase). Accepts sip:… or host[:port].
+     * Fleet Asterisk backends must be literal IPs (not DNS names).
      */
     public static function normalizeSipUri(string $uri): string
     {
@@ -24,18 +25,20 @@ class FleetNodeProvisioner
             $s = 'sip:'.$s;
         }
         $hostPort = strtolower(substr($s, 4));
-        $hostPort = trim($hostPort, '[]');
         if ($hostPort === '') {
-            throw new \InvalidArgumentException('backend_uri must look like sip:host:port');
+            throw new \InvalidArgumentException('backend_uri must look like sip:IP:port');
         }
-        if (! str_contains($hostPort, ':')) {
+        if (! str_contains($hostPort, ':') && ! str_starts_with($hostPort, '[')) {
+            $hostPort .= ':5060';
+        } elseif (str_starts_with($hostPort, '[') && ! str_contains($hostPort, ']:')) {
             $hostPort .= ':5060';
         }
-        if (! preg_match('/^[a-z0-9._\-]+:\d+$/', $hostPort)) {
-            throw new \InvalidArgumentException('backend_uri must look like sip:host:port');
+        $normalized = 'sip:'.$hostPort;
+        if (! \App\Support\SipIpUri::isValid($normalized)) {
+            throw new \InvalidArgumentException(\App\Support\SipIpUri::MESSAGE);
         }
 
-        return 'sip:'.$hostPort;
+        return $normalized;
     }
 
     public static function nextSetid(): int

@@ -21,7 +21,7 @@ class DispatcherResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return false; // Hidden - use Call Routes instead
+        return false; // Hidden - use Domain Routes instead
     }
 
     protected static ?string $modelLabel = 'Destination';
@@ -45,14 +45,14 @@ class DispatcherResource extends Resource
                     ->required()
                     ->maxLength(192)
                     ->rules([
-                        'regex:/^sip:((\[([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\]|([0-9]{1,3}\.){3}[0-9]{1,3}|([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}))(:[0-9]{1,5})?$/',
+                        'regex:'.\App\Support\SipIpUri::REGEX,
                     ])
                     ->validationMessages([
-                        'regex' => 'The destination must start with "sip:" followed by an IP address or domain name (e.g., sip:10.0.1.10:5060 or sip:example.com:5060).',
+                        'regex' => \App\Support\SipIpUri::MESSAGE,
                     ])
                     ->label('Destination (SIP URI)')
                     ->placeholder('sip:10.0.1.10:5060')
-                    ->helperText('Format: sip:host:port (host can be IP address or domain name)'),
+                    ->helperText('Literal IP only (sip:a.b.c.d:5060). DNS names break Asterisk reverse-IP lookup.'),
                 Forms\Components\Select::make('state')
                     ->required()
                     ->options([

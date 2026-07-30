@@ -27,6 +27,17 @@ class DbAliasResource extends Resource
 
     protected static ?string $pluralModelLabel = 'DID aliases';
 
+    /** Retired from operator surface — Number routes + Fleet DIDs only (2026-07-30). */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
+    public static function canViewAny(): bool
+    {
+        return false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form

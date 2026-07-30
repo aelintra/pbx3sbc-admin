@@ -20,7 +20,7 @@ class EditCallRoute extends EditRecord
 
     public function getHeading(): string
     {
-        return 'Edit Call Route: ' . $this->record->domain;
+        return 'Edit Domain Route: ' . $this->record->domain;
     }
 
     protected function getHeaderActions(): array
@@ -44,7 +44,7 @@ class EditCallRoute extends EditRecord
                         Notification::make()
                             ->warning()
                             ->title('OpenSIPS Module Reload Failed')
-                            ->body('The call route was deleted, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
+                            ->body('The domain route was deleted, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
                             ->send();
                     }
                 })
@@ -133,7 +133,7 @@ class EditCallRoute extends EditRecord
         }
 
         Notification::make()
-            ->title('Call route updated successfully')
+            ->title('Domain route updated successfully')
             ->success()
             ->send();
 
@@ -141,7 +141,7 @@ class EditCallRoute extends EditRecord
             Notification::make()
                 ->warning()
                 ->title('OpenSIPS Module Reload Failed')
-                ->body('The call route was updated, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
+                ->body('The domain route was updated, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
                 ->send();
         }
     }

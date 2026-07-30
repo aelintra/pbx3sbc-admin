@@ -75,7 +75,10 @@
                 Local archives
             </x-slot>
             <x-slot name="description">
-                Newest first. Restore from CLI — not from this panel.
+                Newest first. Filename kinship with instance Backup (SPA).
+                <span class="font-mono text-xs">local+S3</span> means the zip is also under
+                <code class="text-xs">s3://…/sbc/{id}/backups/</code>.
+                This list is on-box only (not an S3 catalog). Restore from CLI — not from this panel.
             </x-slot>
 
             @if (count($backups) === 0)
@@ -87,9 +90,13 @@
                             <tr class="border-b border-gray-200 text-gray-500">
                                 <th class="py-2 pr-4 font-medium">Created (UTC)</th>
                                 <th class="py-2 pr-4 font-medium">Archive ID</th>
-                                <th class="py-2 pr-4 font-medium">Local file</th>
-                                <th class="py-2 pr-4 font-medium">Size</th>
-                                <th class="py-2 font-medium">On S3?</th>
+                                <th
+                                    class="py-2 pr-4 font-medium"
+                                    title="Zip name on this host. local+S3 = also uploaded off-box."
+                                >
+                                    Filename
+                                </th>
+                                <th class="py-2 font-medium">Size</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -97,15 +104,16 @@
                                 <tr>
                                     <td class="py-2 pr-4 text-gray-900">{{ $row['created_at'] ?: '—' }}</td>
                                     <td class="py-2 pr-4 font-mono text-xs text-gray-700">{{ $row['backup_stamp'] ?: '—' }}</td>
-                                    <td class="py-2 pr-4 font-mono text-xs text-gray-700">{{ $row['name'] }}</td>
-                                    <td class="py-2 pr-4 text-gray-700">{{ \App\Filament\Pages\Backup::formatBytes((int) $row['bytes']) }}</td>
-                                    <td class="py-2">
+                                    <td class="py-2 pr-4 font-mono text-xs text-gray-700">
+                                        {{ $row['name'] ?: '—' }}
                                         @if (! empty($row['on_s3']))
-                                            <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Yes</span>
-                                        @else
-                                            <span class="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">No</span>
+                                            <span
+                                                class="ml-1 inline-flex rounded bg-green-50 px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-green-800"
+                                                title="Local zip and S3 archive"
+                                            >local+S3</span>
                                         @endif
                                     </td>
+                                    <td class="py-2 text-gray-700">{{ \App\Filament\Pages\Backup::formatBytes((int) $row['bytes']) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

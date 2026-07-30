@@ -9,9 +9,15 @@ class FleetNodeProvisionerTest extends TestCase
 {
     public function test_normalize_sip_uri(): void
     {
-        $this->assertSame('sip:08jzwn.pbx3.com:5060', FleetNodeProvisioner::normalizeSipUri('sip:08jzwn.pbx3.com:5060'));
-        $this->assertSame('sip:08jzwn.pbx3.com:5060', FleetNodeProvisioner::normalizeSipUri('08jzwn.pbx3.com'));
+        $this->assertSame('sip:54.236.153.81:5060', FleetNodeProvisioner::normalizeSipUri('sip:54.236.153.81:5060'));
+        $this->assertSame('sip:54.236.153.81:5060', FleetNodeProvisioner::normalizeSipUri('54.236.153.81'));
         $this->assertSame('sip:54.236.153.81:5060', FleetNodeProvisioner::normalizeSipUri('54.236.153.81:5060'));
+    }
+
+    public function test_normalize_sip_uri_rejects_dns_name(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        FleetNodeProvisioner::normalizeSipUri('sip:08jzwn.pbx3.com:5060');
     }
 
     public function test_fleet_attrs(): void

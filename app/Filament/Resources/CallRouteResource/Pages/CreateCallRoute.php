@@ -118,7 +118,7 @@ class CreateCallRoute extends CreateRecord
         }
 
         Notification::make()
-            ->title('Call route created successfully')
+            ->title('Domain route created successfully')
             ->success()
             ->send();
 
@@ -126,7 +126,7 @@ class CreateCallRoute extends CreateRecord
             Notification::make()
                 ->warning()
                 ->title('OpenSIPS Module Reload Failed')
-                ->body('The call route was created, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
+                ->body('The domain route was created, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
                 ->send();
         }
     }
@@ -144,7 +144,7 @@ class CreateCallRoute extends CreateRecord
             ]);
         }
         
-        // Fallback to call routes list if setid is not available
+        // Fallback to domain routes list if setid is not available
         return CallRouteResource::getUrl('index');
     }
 

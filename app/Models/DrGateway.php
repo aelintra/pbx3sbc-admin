@@ -187,11 +187,48 @@ class DrGateway extends Model
 
     public static function optionsForSelect(): array
     {
-        return static::query()
+        return static::optionsForSelectByGroupid(null);
+    }
+
+    /**
+     * Number-route destination picker: inbound (groupid 1) → Asterisk only;
+     * outbound (groupid 0) → carrier outbound Peers only. Avoids DID→carrier loops.
+     *
+     * @return array<string, string> gwid => label
+     */
+    public static function optionsForSelectByGroupid(null|int|string $groupid): array
+    {
+        $wantRole = self::destinationRoleForGroupid($groupid);
+        $rows = static::query()
             ->orderByRaw('CAST(gwid AS UNSIGNED), gwid')
-            ->get()
+            ->get();
+        if ($wantRole !== null) {
+            $rows = $rows->filter(fn (self $g) => $g->peerRole() === $wantRole);
+        }
+
+        return $rows
             ->mapWithKeys(fn (self $g) => [(string) $g->gwid => $g->displayLabel()])
             ->all();
+    }
+
+    /** @return self::ROLE_*|null null = no filter (legacy / unknown group) */
+    public static function destinationRoleForGroupid(null|int|string $groupid): ?string
+    {
+        return match ((string) $groupid) {
+            '0' => self::ROLE_OUTBOUND,
+            '1' => self::ROLE_ASTERISK,
+            default => null,
+        };
+    }
+
+    public static function gatewayAllowedOnGroupid(self $gateway, null|int|string $groupid): bool
+    {
+        $want = self::destinationRoleForGroupid($groupid);
+        if ($want === null) {
+            return true;
+        }
+
+        return $gateway->peerRole() === $want;
     }
 
     /**

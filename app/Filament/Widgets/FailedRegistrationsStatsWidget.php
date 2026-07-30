@@ -9,6 +9,9 @@ use Illuminate\Support\Carbon;
 
 class FailedRegistrationsStatsWidget extends BaseWidget
 {
+    /** Replaced by SecurityPulseWidget on Home. */
+    protected static bool $isDiscovered = false;
+
     protected static ?int $sort = 2;
 
     protected function getStats(): array
