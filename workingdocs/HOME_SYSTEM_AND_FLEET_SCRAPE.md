@@ -18,7 +18,7 @@
 
 ### Follow-up — usage meters (SPA kinship)
 
-SPA Instance Home (`HomeHostStrip`) now shows thin **usage meters** under Load / Memory / Disk (fill width + continuous green→amber→red). **Retrofit the same to Filament `SystemPostureWidget`** when next touching SBC Home — keep warn/hot bands; meters are additive UX, not a metrics change. Tracked in **`pbx3/workingdocs/TODO.md`**.
+**Done (2026-07-30):** Filament `SystemPostureWidget` uses thin green→amber→red **usage meters** under Load / Memory / Disk (same lerp as SPA `HomeHostStrip`). Home page title is **Home** only (FQDN remains on the INSTANCE chip). Friendly SBC sitename still deferred (no DB field yet).
 
 ## Fleet SPA — what to build later (not started)
 

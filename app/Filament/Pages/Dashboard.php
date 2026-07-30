@@ -19,10 +19,8 @@ class Dashboard extends BaseDashboard
 
     public function getTitle(): string | Htmlable
     {
-        $fqdn = parse_url((string) config('app.url'), PHP_URL_HOST)
-            ?: request()->getHost();
-
-        return $fqdn ? "Home — {$fqdn}" : 'Home';
+        // FQDN stays on the INSTANCE chip; avoid repeating it in the page title (SPA kinship: Home — {sitename}).
+        return 'Home';
     }
 
     public function getColumns(): int | string | array
