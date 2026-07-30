@@ -9,6 +9,9 @@ use Illuminate\Support\Carbon;
 
 class CdrStatsWidget extends BaseWidget
 {
+    /** Replaced by Home ops-pulse charts (CallVolume / CallOutcome). */
+    protected static bool $isDiscovered = false;
+
     protected static ?int $sort = 1;
 
     protected function getStats(): array

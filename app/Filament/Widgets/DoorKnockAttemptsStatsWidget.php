@@ -9,6 +9,9 @@ use Illuminate\Support\Carbon;
 
 class DoorKnockAttemptsStatsWidget extends BaseWidget
 {
+    /** Replaced by SecurityPulseWidget / SecurityTrendChartWidget on Home. */
+    protected static bool $isDiscovered = false;
+
     protected static ?int $sort = 3;
 
     protected function getStats(): array
