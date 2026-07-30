@@ -7,6 +7,7 @@ use App\Filament\Widgets\CallVolumeChartWidget;
 use App\Filament\Widgets\LivePostureWidget;
 use App\Filament\Widgets\SecurityPulseWidget;
 use App\Filament\Widgets\SecurityTrendChartWidget;
+use App\Filament\Widgets\SystemPostureWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Illuminate\Contracts\Support\Htmlable;
 
@@ -36,6 +37,7 @@ class Dashboard extends BaseDashboard
     {
         return [
             LivePostureWidget::class,
+            SystemPostureWidget::class,
             CallVolumeChartWidget::class,
             CallOutcomeChartWidget::class,
             SecurityPulseWidget::class,

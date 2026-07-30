@@ -5,10 +5,8 @@ namespace App\Filament\Widgets;
 use App\Filament\Resources\DialogResource;
 use App\Filament\Resources\DomainResource;
 use App\Filament\Resources\LocationResource;
-use App\Models\Dialog;
-use App\Models\Domain;
-use App\Models\Location;
 use App\Services\Fail2banService;
+use App\Services\HomeDashboardMetrics;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Cache;
@@ -17,26 +15,19 @@ class LivePostureWidget extends BaseWidget
 {
     protected static ?int $sort = 1;
 
-    protected static ?string $pollingInterval = '15s';
+    /** Live tables are small; still avoid sub-15s hammering. */
+    protected static ?string $pollingInterval = '30s';
 
     protected int | string | array $columnSpan = 'full';
 
     protected function getStats(): array
     {
-        $activeDialogs = Dialog::query()
-            ->whereIn('state', [1, 2, 3, 4])
-            ->count();
-
-        $registeredAors = Location::query()
-            ->where('expires', '>', time())
-            ->count();
-
-        $domains = Domain::query()->count();
+        $live = app(HomeDashboardMetrics::class)->livePosture();
 
         $bannedCount = 0;
         $fail2banOk = true;
         try {
-            $status = Cache::remember('fail2ban_status', 10, function () {
+            $status = Cache::remember('fail2ban_status', 15, function () {
                 try {
                     return app(Fail2banService::class)->getStatus();
                 } catch (\Throwable) {
@@ -56,19 +47,19 @@ class LivePostureWidget extends BaseWidget
         }
 
         return [
-            Stat::make('Active dialogs', number_format($activeDialogs))
-                ->description($activeDialogs > 0 ? 'In progress on this edge' : 'No live dialogs')
+            Stat::make('Active dialogs', number_format($live['dialogs']))
+                ->description($live['dialogs'] > 0 ? 'In progress on this edge' : 'No live dialogs')
                 ->descriptionIcon('heroicon-m-phone')
-                ->color($activeDialogs > 0 ? 'info' : 'gray')
+                ->color($live['dialogs'] > 0 ? 'info' : 'gray')
                 ->url(DialogResource::getUrl('index')),
 
-            Stat::make('Registered AoRs', number_format($registeredAors))
+            Stat::make('Registered AoRs', number_format($live['aors']))
                 ->description('Contacts not yet expired')
                 ->descriptionIcon('heroicon-m-device-phone-mobile')
                 ->color('primary')
                 ->url(LocationResource::getUrl('index')),
 
-            Stat::make('Tenant domains', number_format($domains))
+            Stat::make('Tenant domains', number_format($live['domains']))
                 ->description('OpenSIPS domain table')
                 ->descriptionIcon('heroicon-m-globe-alt')
                 ->color('primary')
