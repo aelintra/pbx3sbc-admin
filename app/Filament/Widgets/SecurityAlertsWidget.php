@@ -10,6 +10,9 @@ use Illuminate\Support\Carbon;
 
 class SecurityAlertsWidget extends BaseWidget
 {
+    /** Folded into SecurityPulseWidget on Home. */
+    protected static bool $isDiscovered = false;
+
     protected static ?int $sort = 5;
 
     protected function getStats(): array

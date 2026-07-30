@@ -9,8 +9,11 @@ use Illuminate\Support\Facades\Cache;
 
 class Fail2banStatusWidget extends BaseWidget
 {
+    /** Folded into LivePostureWidget banned-IP stat on Home. */
+    protected static bool $isDiscovered = false;
+
     protected static ?int $sort = 4;
-    
+
     protected static ?string $pollingInterval = '30s';
 
     protected function getStats(): array
