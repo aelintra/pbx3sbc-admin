@@ -12,7 +12,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
  */
 class SystemPostureWidget extends BaseWidget
 {
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 1;
 
     protected static ?string $pollingInterval = '60s';
 

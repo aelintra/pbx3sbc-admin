@@ -36,8 +36,8 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            LivePostureWidget::class,
             SystemPostureWidget::class,
+            LivePostureWidget::class,
             CallVolumeChartWidget::class,
             CallOutcomeChartWidget::class,
             SecurityPulseWidget::class,

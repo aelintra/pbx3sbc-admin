@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Cache;
 
 class LivePostureWidget extends BaseWidget
 {
-    protected static ?int $sort = 1;
+    protected static ?int $sort = 2;
 
     /** Live tables are small; still avoid sub-15s hammering. */
     protected static ?string $pollingInterval = '30s';
