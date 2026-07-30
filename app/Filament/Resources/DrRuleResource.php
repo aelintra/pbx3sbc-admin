@@ -8,6 +8,7 @@ use App\Models\DrRule;
 use App\Services\DrRulePrefixOverlap;
 use Filament\Forms;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -47,6 +48,10 @@ class DrRuleResource extends Resource
                             ->required()
                             ->native(false)
                             ->live()
+                            ->afterStateUpdated(function (Set $set): void {
+                                // Direction change invalidates peer picks (inbound≠carrier).
+                                $set('gwlist', []);
+                            })
                             ->helperText('Outbound runs when Asterisk sends a long number to the SBC. Inbound runs for trusted carrier INVITEs.'),
                         Forms\Components\TextInput::make('prefix')
                             ->label('Number prefix')
@@ -125,8 +130,12 @@ class DrRuleResource extends Resource
                             ->multiple()
                             ->required()
                             ->searchable()
-                            ->options(fn () => DrGateway::optionsForSelect())
-                            ->helperText('Pick peers by name. First = primary; further entries are failover order.')
+                            ->options(fn (Get $get) => DrGateway::optionsForSelectByGroupid($get('groupid')))
+                            ->helperText(fn (Get $get): string => match ((string) $get('groupid')) {
+                                '1' => 'Inbound DID: Asterisk (fleet node) destinations only — not carrier peers (avoids loops).',
+                                '0' => 'Outbound: carrier outbound peers only.',
+                                default => 'Pick a direction first. Destinations are filtered to match.',
+                            })
                             ->afterStateHydrated(function (Forms\Components\Select $component, $state): void {
                                 if (is_array($state)) {
                                     return;
@@ -144,8 +153,8 @@ class DrRuleResource extends Resource
                                 return (string) $state;
                             })
                             ->rules([
-                                function () {
-                                    return function (string $attribute, $value, \Closure $fail): void {
+                                function (Get $get) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($get): void {
                                         $tokens = is_array($value)
                                             ? array_values(array_filter(array_map('strval', $value)))
                                             : array_values(array_filter(array_map('trim', explode(',', (string) $value))));
@@ -154,12 +163,24 @@ class DrRuleResource extends Resource
 
                                             return;
                                         }
+                                        $groupid = $get('groupid');
+                                        $want = DrGateway::destinationRoleForGroupid($groupid);
                                         foreach ($tokens as $token) {
                                             if (str_starts_with($token, '#')) {
                                                 continue;
                                             }
-                                            if (! DrGateway::where('gwid', $token)->exists()) {
+                                            $gw = DrGateway::where('gwid', $token)->first();
+                                            if ($gw === null) {
                                                 $fail("Unknown peer id: {$token}");
+
+                                                continue;
+                                            }
+                                            if ($want !== null && ! DrGateway::gatewayAllowedOnGroupid($gw, $groupid)) {
+                                                $fail(
+                                                    $want === DrGateway::ROLE_ASTERISK
+                                                        ? "Inbound routes may only send to Asterisk destinations (not “{$gw->displayLabel()}”)."
+                                                        : "Outbound routes may only send to outbound carrier peers (not “{$gw->displayLabel()}”)."
+                                                );
                                             }
                                         }
                                     };
