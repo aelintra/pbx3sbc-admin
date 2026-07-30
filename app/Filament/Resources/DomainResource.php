@@ -18,7 +18,7 @@ class DomainResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return false; // Hidden - use Call Routes instead
+        return false; // Hidden - use Domain Routes instead
     }
 
     public static function form(Form $form): Form

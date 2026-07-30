@@ -17,7 +17,7 @@ class ViewCallRoute extends ViewRecord
 
     public function getHeading(): string
     {
-        return 'View Call Route: ' . $this->record->domain;
+        return 'View Domain Route: ' . $this->record->domain;
     }
 
     protected function getHeaderActions(): array

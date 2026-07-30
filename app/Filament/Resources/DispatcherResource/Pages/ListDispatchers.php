@@ -22,7 +22,7 @@ class ListDispatchers extends ListRecords
 
     protected function getPanelBackLabel(): string
     {
-        return 'Call Routes';
+        return 'Domain Routes';
     }
 
     public function getHeading(): string

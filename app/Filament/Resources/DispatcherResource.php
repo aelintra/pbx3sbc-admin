@@ -21,7 +21,7 @@ class DispatcherResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        return false; // Hidden - use Call Routes instead
+        return false; // Hidden - use Domain Routes instead
     }
 
     protected static ?string $modelLabel = 'Destination';

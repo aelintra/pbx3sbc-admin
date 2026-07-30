@@ -24,7 +24,7 @@ class CallRouteResource extends Resource
 
     protected static ?string $navigationIcon = 'lucide-git-branch';
 
-    protected static ?string $navigationLabel = 'Call Routes';
+    protected static ?string $navigationLabel = 'Domain Routes';
 
     protected static ?string $navigationGroup = 'Routing';
 
@@ -313,7 +313,7 @@ class CallRouteResource extends Resource
                     ])),
                 Tables\Actions\DeleteAction::make()
                     ->requiresConfirmation()
-                    ->modalHeading('Delete Call Route')
+                    ->modalHeading('Delete Domain Route')
                     ->modalDescription(fn ($record) => 
                         'This will delete the domain "' . $record->domain . '" and ALL of its destinations. ' .
                         'This action cannot be undone. ' .
@@ -338,7 +338,7 @@ class CallRouteResource extends Resource
                     })
                     ->successRedirectUrl(CallRouteResource::getUrl('index'))
                     ->successNotification(function () {
-                        $body = 'The call route has been deleted successfully.';
+                        $body = 'The domain route has been deleted successfully.';
                         
                         // Check if MI reload failed
                         if (session()->has('opensips_mi_failed')) {
@@ -348,7 +348,7 @@ class CallRouteResource extends Resource
                         
                         return Notification::make()
                             ->success()
-                            ->title('Call route deleted')
+                            ->title('Domain route deleted')
                             ->body($body);
                     }),
             ])
@@ -380,14 +380,14 @@ class CallRouteResource extends Resource
                         ->successNotification(function () {
                             $miStatus = session()->pull('last_delete_mi_status', true);
                             
-                            $body = 'The call routes have been deleted successfully.';
+                            $body = 'The domain routes have been deleted successfully.';
                             if (!$miStatus) {
                                 $body .= ' However, OpenSIPS modules could not be reloaded. You may need to reload them manually.';
                             }
                             
                             return Notification::make()
                                 ->success()
-                                ->title('Call routes deleted')
+                                ->title('Domain routes deleted')
                                 ->body($body);
                         }),
                 ]),
@@ -407,7 +407,7 @@ class CallRouteResource extends Resource
      */
     public static function getModelLabel(): string
     {
-        return 'Call Route';
+        return 'Domain Route';
     }
 
     /**
@@ -415,7 +415,7 @@ class CallRouteResource extends Resource
      */
     public static function getPluralModelLabel(): string
     {
-        return 'Call Routes';
+        return 'Domain Routes';
     }
 
     public static function getPages(): array
