@@ -26,9 +26,9 @@ class LocationResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Locations';
 
-    protected static ?string $navigationGroup = 'Routing';
+    protected static ?string $navigationGroup = 'System';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 15;
 
     public static function form(Form $form): Form
     {
