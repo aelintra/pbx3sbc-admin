@@ -16,6 +16,10 @@
 **Efficiency:** 45s cache, 60s Livewire poll. No `exec`, no 1s CPU sample sleep, no `iostat`.  
 **Out of scope on Home:** disk I/O rates, network graphs, per-process top, long time-series (FreePBX wallpaper).
 
+### Follow-up — usage meters (SPA kinship)
+
+SPA Instance Home (`HomeHostStrip`) now shows thin **usage meters** under Load / Memory / Disk (fill width + continuous green→amber→red). **Retrofit the same to Filament `SystemPostureWidget`** when next touching SBC Home — keep warn/hot bands; meters are additive UX, not a metrics change. Tracked in **`pbx3/workingdocs/TODO.md`**.
+
 ## Fleet SPA — what to build later (not started)
 
 Goal: multi-edge host health in **Fleet mode** without hammering each SBC on every browser poll, and without putting geo/I/O heatmaps on the Magrathea MariaDB path.

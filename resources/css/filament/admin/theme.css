@@ -1,7 +1,8 @@
 /**
  * PBX3 SBC Admin — Filament theme aligned with pbx3spa shell tokens.
  * Compile: npm run build:filament-theme
- * Light: slate canvas / subtle sidebar / blue accent. Dark mode disabled (SPA kinship).
+ * Shared canvas: gray-50 #f9fafb (= SPA --pbx-canvas); sidebar gray-100 #f3f4f6 (= --pbx-surface-subtle).
+ * Dark mode disabled (SPA kinship).
  */
 @tailwind base;
 @tailwind components;
@@ -166,9 +167,9 @@
     @apply bg-gray-50;
 }
 
-/* SPA: list rows share the panel canvas (no raised white table card) */
+/* SPA kinship: list rows share the panel canvas (--pbx-canvas / gray-50) */
 .fi-ta-ctn {
-    background-color: #f8fafc !important;
+    background-color: #f9fafb !important;
     box-shadow: none !important;
     --tw-ring-shadow: 0 0 #0000 !important;
     --tw-ring-offset-shadow: 0 0 #0000 !important;
@@ -179,7 +180,7 @@
 .fi-ta-table > tbody > tr,
 .fi-ta-table > tbody > tr > td,
 .fi-ta-header-toolbar {
-    background-color: #f8fafc !important;
+    background-color: #f9fafb !important;
 }
 
 .dark .fi-ta-ctn,
