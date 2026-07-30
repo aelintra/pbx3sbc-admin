@@ -2,15 +2,16 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\CdrResource;
 use App\Models\Cdr;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\HtmlString;
 
 class CallOutcomeChartWidget extends ChartWidget
 {
     protected static ?string $heading = 'Call outcome mix (today)';
-
-    protected static ?string $description = 'Disposition buckets from today’s edge CDR';
 
     protected static ?int $sort = 3;
 
@@ -19,6 +20,16 @@ class CallOutcomeChartWidget extends ChartWidget
     protected static ?string $pollingInterval = '60s';
 
     protected int | string | array $columnSpan = 1;
+
+    public function getDescription(): string | Htmlable | null
+    {
+        $url = e(CdrResource::getUrl('index'));
+
+        return new HtmlString(
+            'Disposition buckets from today’s edge CDR. '
+            . '<a href="' . $url . '" class="font-medium text-primary-600 hover:underline">Open CDR →</a>'
+        );
+    }
 
     protected function getType(): string
     {

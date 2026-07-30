@@ -2,16 +2,18 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\DoorKnockAttemptResource;
+use App\Filament\Resources\FailedRegistrationResource;
 use App\Models\DoorKnockAttempt;
 use App\Models\FailedRegistration;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\HtmlString;
 
 class SecurityTrendChartWidget extends ChartWidget
 {
     protected static ?string $heading = 'Security trend (last 7 days)';
-
-    protected static ?string $description = 'Daily door-knock and failed REGISTER counts';
 
     protected static ?int $sort = 5;
 
@@ -20,6 +22,19 @@ class SecurityTrendChartWidget extends ChartWidget
     protected static ?string $pollingInterval = '120s';
 
     protected int | string | array $columnSpan = 'full';
+
+    public function getDescription(): string | Htmlable | null
+    {
+        $doorUrl = e(DoorKnockAttemptResource::getUrl('index'));
+        $failUrl = e(FailedRegistrationResource::getUrl('index'));
+
+        return new HtmlString(
+            'Daily door-knock and failed REGISTER counts. '
+            . '<a href="' . $doorUrl . '" class="font-medium text-primary-600 hover:underline">Door-knock →</a>'
+            . ' · '
+            . '<a href="' . $failUrl . '" class="font-medium text-primary-600 hover:underline">Failed REGISTER →</a>'
+        );
+    }
 
     protected function getType(): string
     {

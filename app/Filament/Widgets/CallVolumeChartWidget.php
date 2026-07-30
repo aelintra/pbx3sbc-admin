@@ -2,15 +2,16 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\CdrResource;
 use App\Models\Cdr;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\HtmlString;
 
 class CallVolumeChartWidget extends ChartWidget
 {
     protected static ?string $heading = 'Edge call volume (last 24h)';
-
-    protected static ?string $description = 'Hourly INVITE outcomes from OpenSIPS acc — edge ops only';
 
     protected static ?int $sort = 2;
 
@@ -19,6 +20,16 @@ class CallVolumeChartWidget extends ChartWidget
     protected static ?string $pollingInterval = '60s';
 
     protected int | string | array $columnSpan = 1;
+
+    public function getDescription(): string | Htmlable | null
+    {
+        $url = e(CdrResource::getUrl('index'));
+
+        return new HtmlString(
+            'Hourly INVITE outcomes from OpenSIPS acc — edge ops only. '
+            . '<a href="' . $url . '" class="font-medium text-primary-600 hover:underline">Open CDR →</a>'
+        );
+    }
 
     protected function getType(): string
     {
