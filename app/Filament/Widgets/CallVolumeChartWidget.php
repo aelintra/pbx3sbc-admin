@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Resources\CdrResource;
 use App\Services\HomeDashboardMetrics;
+use App\Support\SiteTimezone;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
@@ -23,9 +24,10 @@ class CallVolumeChartWidget extends ChartWidget
     public function getDescription(): string | Htmlable | null
     {
         $url = e(CdrResource::getUrl('index'));
+        $tz = e(SiteTimezone::id());
 
         return new HtmlString(
-            'Hourly INVITE outcomes from OpenSIPS acc — edge ops only. '
+            'Hourly INVITE outcomes from OpenSIPS acc (hour labels <strong>'.$tz.'</strong>). '
             . '<a href="' . $url . '" class="font-medium text-primary-600 hover:underline">Open CDR →</a>'
         );
     }

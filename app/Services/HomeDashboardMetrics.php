@@ -8,6 +8,7 @@ use App\Models\Domain;
 use App\Models\DoorKnockAttempt;
 use App\Models\FailedRegistration;
 use App\Models\Location;
+use App\Support\SiteTimezone;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
@@ -129,16 +130,20 @@ class HomeDashboardMetrics
     }
 
     /**
-     * @return array{labels: list<string>, completed: list<int>, failed: list<int>}
+     * @return array{timezone: string, labels: list<string>, completed: list<int>, failed: list<int>}
      */
     public function callVolumeLast24h(): array
     {
-        return Cache::remember('home:cdr_volume_24h', self::TTL_CDR, function () {
-            $now = Carbon::now()->startOfHour();
+        $tz = SiteTimezone::id();
+
+        return Cache::remember('home:cdr_volume_24h:'.$tz, self::TTL_CDR, function () use ($tz) {
+            $utc = new \DateTimeZone('UTC');
+            $site = SiteTimezone::zone();
+            $now = Carbon::now($utc)->startOfHour();
             $start = $now->copy()->subHours(23);
 
             $rows = Cdr::query()
-                ->where('created', '>=', $start)
+                ->where('created', '>=', $start->format('Y-m-d H:i:s'))
                 ->selectRaw("DATE_FORMAT(created, '%Y-%m-%d %H:00:00') as bucket")
                 ->selectRaw('SUM(CASE WHEN sip_code = 200 THEN 1 ELSE 0 END) as completed')
                 ->selectRaw('SUM(CASE WHEN sip_code != 200 OR sip_code IS NULL THEN 1 ELSE 0 END) as failed')
@@ -154,23 +159,30 @@ class HomeDashboardMetrics
             for ($i = 0; $i < 24; $i++) {
                 $hour = $start->copy()->addHours($i);
                 $key = $hour->format('Y-m-d H:00:00');
-                $labels[] = $hour->format('H:00');
+                $labels[] = $hour->copy()->timezone($site)->format('H:00');
                 $row = $rows->get($key);
                 $completed[] = (int) ($row->completed ?? 0);
                 $failed[] = (int) ($row->failed ?? 0);
             }
 
-            return compact('labels', 'completed', 'failed');
+            return [
+                'timezone' => $tz,
+                'labels' => $labels,
+                'completed' => $completed,
+                'failed' => $failed,
+            ];
         });
     }
 
     /**
-     * @return array{answered: int, no_answer: int, busy: int, other: int}
+     * @return array{timezone: string, answered: int, no_answer: int, busy: int, other: int}
      */
     public function callOutcomeToday(): array
     {
-        return Cache::remember('home:cdr_outcome_today', self::TTL_CDR, function () {
-            $todayStart = Carbon::now()->startOfDay();
+        $tz = SiteTimezone::id();
+
+        return Cache::remember('home:cdr_outcome_today:'.$tz, self::TTL_CDR, function () use ($tz) {
+            $todayStart = SiteTimezone::todayStartUtc();
 
             $rows = Cdr::query()
                 ->where('created', '>=', $todayStart)
@@ -199,6 +211,7 @@ class HomeDashboardMetrics
             }
 
             return [
+                'timezone' => $tz,
                 'answered' => $answered,
                 'no_answer' => $noAnswer,
                 'busy' => $busy,

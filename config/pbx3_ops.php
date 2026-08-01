@@ -37,4 +37,12 @@ return [
         FILTER_VALIDATE_BOOL
     ),
 
+    /**
+     * Optional IANA override for CDR day buckets / Filament display.
+     * Empty → /etc/timezone (host OS).
+     */
+    'site_timezone' => env('PBX3_SBC_SITE_TIMEZONE', ''),
+
+    'timezone_file' => env('PBX3_SBC_TIMEZONE_FILE', '/etc/timezone'),
+
 ];

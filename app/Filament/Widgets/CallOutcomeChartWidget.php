@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Resources\CdrResource;
 use App\Services\HomeDashboardMetrics;
+use App\Support\SiteTimezone;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
@@ -23,9 +24,10 @@ class CallOutcomeChartWidget extends ChartWidget
     public function getDescription(): string | Htmlable | null
     {
         $url = e(CdrResource::getUrl('index'));
+        $tz = e(SiteTimezone::id());
 
         return new HtmlString(
-            'Disposition buckets from today’s edge CDR. '
+            'Disposition buckets since midnight <strong>'.$tz.'</strong>. '
             . '<a href="' . $url . '" class="font-medium text-primary-600 hover:underline">Open CDR →</a>'
         );
     }

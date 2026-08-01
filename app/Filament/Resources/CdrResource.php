@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\CdrResource\Pages;
 use App\Models\Cdr;
+use App\Support\SiteTimezone;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -90,10 +91,15 @@ class CdrResource extends Resource
                 TextColumn::make('created')
                     ->label('Start Time')
                     ->dateTime('Y-m-d H:i:s')
-                    ->sortable(),
+                    ->timezone(SiteTimezone::id())
+                    ->sortable()
+                    ->tooltip(fn ($record) => $record->created
+                        ? $record->created->clone()->utc()->format('Y-m-d H:i:s').' UTC'
+                        : null),
                 TextColumn::make('time')
                     ->label('End Time')
                     ->dateTime('Y-m-d H:i:s')
+                    ->timezone(SiteTimezone::id())
                     ->sortable(),
                 TextColumn::make('sip_code')
                     ->label('SIP Code')
@@ -231,14 +237,16 @@ class CdrResource extends Resource
                         }
 
                         // Empty date range = all records (Reset clears dates).
+                        // Pickers are site-local; acc.created compared as UTC wall.
                         $startDateTime = null;
+                        $endDateTime = null;
                         if (filled($startDate)) {
                             $time = filled($startTime) ? $startTime : '00:00';
                             if (is_string($time)) {
                                 $timeParts = explode(':', $time);
                                 $time = str_pad($timeParts[0], 2, '0', STR_PAD_LEFT).':'.str_pad($timeParts[1] ?? '00', 2, '0', STR_PAD_LEFT);
                             }
-                            $startDateTime = $startDate.' '.$time.':00';
+                            $startDateTime = SiteTimezone::siteLocalToUtc($startDate, $time.':00');
                             $query->where('created', '>=', $startDateTime);
                         }
 
@@ -248,7 +256,7 @@ class CdrResource extends Resource
                                 $timeParts = explode(':', $time);
                                 $time = str_pad($timeParts[0], 2, '0', STR_PAD_LEFT).':'.str_pad($timeParts[1] ?? '59', 2, '0', STR_PAD_LEFT);
                             }
-                            $endDateTime = $endDate.' '.$time.':59';
+                            $endDateTime = SiteTimezone::siteLocalToUtc($endDate, $time, true);
 
                             if ($startDateTime && strtotime($startDateTime) >= strtotime($endDateTime)) {
                                 return $query->whereRaw('1 = 0');
