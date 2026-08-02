@@ -7,7 +7,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
 /**
- * Cold DR backup — create/list local zips (+ optional S3 upload).
+ * Cold DR backup — create/list merged local + S3 archives (+ optional S3 upload).
  * Restore is CLI-only. Warm standby sync is Fleet → Edge HA.
  */
 class Backup extends Page
@@ -32,7 +32,7 @@ class Backup extends Page
 
     public string $loadError = '';
 
-    /** @var list<array{name: string, path: string, backup_stamp: string, created_at: string, epoch: int, bytes: int}> */
+    /** @var list<array{name: string, path: string, backup_stamp: string, created_at: string, epoch: int, bytes: int, on_s3: bool, has_local: bool, has_s3: bool}> */
     public array $backups = [];
 
     public bool $creating = false;

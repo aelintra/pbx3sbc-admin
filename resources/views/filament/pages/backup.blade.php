@@ -72,17 +72,18 @@
 
         <x-filament::section>
             <x-slot name="heading">
-                Local archives
+                Archives
             </x-slot>
             <x-slot name="description">
-                Newest first. Filename kinship with instance Backup (SPA).
-                <span class="font-mono text-xs">local+S3</span> means the zip is also under
-                <code class="text-xs">s3://…/sbc/{id}/backups/</code>.
-                This list is on-box only (not an S3 catalog). Restore from CLI — not from this panel.
+                Newest first. Filename kinship with instance Backup (SPA):
+                <span class="font-mono text-xs">local+S3</span> = on this host and S3;
+                <span class="font-mono text-xs">S3</span> = aged out of local FIFO (keep 9) but still under
+                <code class="text-xs">s3://…/sbc/{id}/backups/</code> (~30d).
+                Restore from CLI — not from this panel.
             </x-slot>
 
             @if (count($backups) === 0)
-                <p class="text-sm text-gray-500">No local <code class="text-xs">sbcbak.*.zip</code> files yet.</p>
+                <p class="text-sm text-gray-500">No local or S3 archives found yet.</p>
             @else
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
@@ -92,7 +93,7 @@
                                 <th class="py-2 pr-4 font-medium">Archive ID</th>
                                 <th
                                     class="py-2 pr-4 font-medium"
-                                    title="Zip name on this host. local+S3 = also uploaded off-box."
+                                    title="Zip name (sbcbak.{epoch}.zip). S3-only rows have no copy on this host."
                                 >
                                     Filename
                                 </th>
@@ -106,14 +107,25 @@
                                     <td class="py-2 pr-4 font-mono text-xs text-gray-700">{{ $row['backup_stamp'] ?: '—' }}</td>
                                     <td class="py-2 pr-4 font-mono text-xs text-gray-700">
                                         {{ $row['name'] ?: '—' }}
-                                        @if (! empty($row['on_s3']))
+                                        @if (! empty($row['has_s3']) && empty($row['has_local']))
+                                            <span
+                                                class="ml-1 inline-flex rounded bg-sky-50 px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-sky-800"
+                                                title="Archive only on S3 — restore via CLI (fetch-latest / restore-sbc-backup)"
+                                            >S3</span>
+                                        @elseif (! empty($row['on_s3']) || (! empty($row['has_local']) && ! empty($row['has_s3'])))
                                             <span
                                                 class="ml-1 inline-flex rounded bg-green-50 px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-green-800"
                                                 title="Local zip and S3 archive"
                                             >local+S3</span>
                                         @endif
                                     </td>
-                                    <td class="py-2 text-gray-700">{{ \App\Filament\Pages\Backup::formatBytes((int) $row['bytes']) }}</td>
+                                    <td class="py-2 text-gray-700">
+                                        @if ((int) ($row['bytes'] ?? 0) > 0)
+                                            {{ \App\Filament\Pages\Backup::formatBytes((int) $row['bytes']) }}
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

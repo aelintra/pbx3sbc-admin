@@ -48,7 +48,9 @@ class SbcBackupService
     }
 
     /**
-     * @return list<array{name: string, path: string, backup_stamp: string, created_at: string, epoch: int, bytes: int, on_s3: bool}>
+     * Merged local + S3 backup index (SPA Backup kinship).
+     *
+     * @return list<array{name: string, path: string, backup_stamp: string, created_at: string, epoch: int, bytes: int, on_s3: bool, has_local: bool, has_s3: bool}>
      */
     public function listLocal(): array
     {
@@ -63,6 +65,8 @@ class SbcBackupService
             if (! is_array($row)) {
                 continue;
             }
+            $onS3 = (bool) ($row['on_s3'] ?? $row['has_s3'] ?? false);
+            $hasLocal = (bool) ($row['has_local'] ?? (($row['path'] ?? '') !== ''));
             $out[] = [
                 'name' => (string) ($row['name'] ?? ''),
                 'path' => (string) ($row['path'] ?? ''),
@@ -70,7 +74,9 @@ class SbcBackupService
                 'created_at' => (string) ($row['created_at'] ?? ''),
                 'epoch' => (int) ($row['epoch'] ?? 0),
                 'bytes' => (int) ($row['bytes'] ?? 0),
-                'on_s3' => (bool) ($row['on_s3'] ?? false),
+                'on_s3' => $onS3,
+                'has_local' => $hasLocal,
+                'has_s3' => $onS3,
             ];
         }
 
