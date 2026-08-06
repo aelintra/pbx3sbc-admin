@@ -232,6 +232,33 @@ class FleetSbcController extends Controller
     }
 
     /**
+     * Fleet Delete — remove tenant SIP domain row (idempotent if already absent).
+     * Path param {domain} is URL-decoded (e.g. tenant.example.com).
+     */
+    public function deleteDomain(string $domain, OpenSIPSMIService $mi): JsonResponse
+    {
+        $domainName = strtolower(trim(rawurldecode($domain)));
+        if ($domainName === '') {
+            return response()->json(['message' => 'domain required'], 422);
+        }
+
+        $row = Domain::query()->where('domain', $domainName)->first();
+        $deleted = false;
+        if ($row !== null) {
+            $row->delete();
+            $deleted = true;
+            $mi->domainReload();
+        }
+
+        return response()->json([
+            'ok' => true,
+            'deleted' => $deleted,
+            'domain' => $domainName,
+            'already_absent' => ! $deleted,
+        ]);
+    }
+
+    /**
      * S10.5 residue — provision node dispatcher set + Asterisk Peer (adapter registerNode).
      * Body: { instance_id, backend_uri, setid?, confirm?, source_ip?, description?, dry_run? }
      */
