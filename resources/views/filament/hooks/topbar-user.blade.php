@@ -17,10 +17,16 @@
 @endif
 
 @if ($userName)
+    @php
+        $profileUrl = url('/admin/my-profile');
+    @endphp
     <div class="pbx-topbar-user ms-auto flex items-center gap-x-4">
         <span class="pbx-topbar-user-label truncate">
             Logged in as {{ $userName }}
         </span>
+        <a href="{{ $profileUrl }}" class="pbx-topbar-profile-link shrink-0">
+            Profile
+        </a>
         <form method="POST" action="{{ $logoutUrl }}" class="pbx-topbar-logout-form shrink-0">
             @csrf
             <button type="submit" class="pbx-topbar-logout-btn">

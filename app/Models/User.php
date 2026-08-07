@@ -6,11 +6,24 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Jeffgreco13\FilamentBreezy\Traits\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+
+    /**
+     * otpauth issuer for authenticator apps (distinct from future SPA / instance MFA).
+     */
+    public function getTwoFactorQrCodeUrl()
+    {
+        return filament('filament-breezy')->getQrCodeUrl(
+            (string) config('panel.totp_issuer', 'Aelintra SBC'),
+            $this->email,
+            decrypt($this->breezySession->two_factor_secret)
+        );
+    }
 
     /**
      * The attributes that are mass assignable.

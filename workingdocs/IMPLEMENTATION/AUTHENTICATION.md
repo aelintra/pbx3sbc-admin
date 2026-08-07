@@ -39,12 +39,14 @@ This document explains the authentication and authorization system used in the P
 - ✅ Session-based authentication
 - ✅ Password reset
 - ✅ User creation (`php artisan make:filament-user`)
+- ✅ **TOTP 2FA (opt-in)** — Filament Breezy; see **`../TOTP_2FA_SBC.md`**
 
 **How it works:**
 - Users log in at `/admin/login`
 - Filament creates Laravel session
 - Session cookie stored in browser
 - Laravel validates session on each request
+- If 2FA confirmed: password succeeds → challenge page → TOTP/recovery → panel
 
 **Configuration:**
 ```php

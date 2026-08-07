@@ -20,6 +20,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Illuminate\Support\Facades\Blade;
+use Jeffgreco13\FilamentBreezy\BreezyCore;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -30,10 +31,20 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->profile(isSimple: false)
+            // Profile / TOTP enroll via Breezy My Profile (avatar menu is hidden — topbar Profile link).
             // Match pbx3spa shell: slate surfaces + blue #2563eb accent (STYLESYNC / SPA --pbx-*)
             // Topbar shows mode label; sidebar shows PBX³ mark (SPA BrandMark kinship).
             ->brandName('SBC')
+            ->plugin(
+                BreezyCore::make()
+                    ->myProfile(
+                        shouldRegisterUserMenu: false, // custom topbar hides Filament user menu
+                        shouldRegisterNavigation: false,
+                        hasAvatars: false,
+                        slug: 'my-profile',
+                    )
+                    ->enableTwoFactorAuthentication(force: false),
+            )
             ->brandLogo(fn () => view('filament.hooks.sidebar-brand'))
             ->brandLogoHeight('2.5rem')
             ->colors([
