@@ -12,7 +12,6 @@ use App\Services\OpenSIPSMIService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class CreateCallRoute extends CreateRecord
 {
@@ -106,16 +105,10 @@ class CreateCallRoute extends CreateRecord
         }
 
         // Reload OpenSIPS modules
-        $miReloadSuccess = true;
-        try {
-            $miService = app(OpenSIPSMIService::class);
-            $miService->domainReload();
-            $miService->dispatcherReload();
-        } catch (\Exception $e) {
-            // Log but don't fail the operation
-            Log::warning('OpenSIPS MI reload failed after route creation', ['error' => $e->getMessage()]);
-            $miReloadSuccess = false;
-        }
+        $miService = app(OpenSIPSMIService::class);
+        $domainOk = $miService->domainReload();
+        $dispatcherOk = $miService->dispatcherReload();
+        $miReloadSuccess = $domainOk && $dispatcherOk;
 
         Notification::make()
             ->title('Domain route created successfully')

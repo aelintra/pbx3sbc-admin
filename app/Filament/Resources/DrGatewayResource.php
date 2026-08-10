@@ -285,7 +285,13 @@ class DrGatewayResource extends Resource
                         }
                     })
                     ->after(function () {
-                        app(\App\Services\OpenSIPSMIService::class)->drReload();
+                        if (! app(\App\Services\OpenSIPSMIService::class)->drReload()) {
+                            Notification::make()
+                                ->title('Peer deleted — reload failed')
+                                ->body('The peer was deleted, but OpenSIPS drouting reload (dr_reload) failed. Routing may be stale until reloaded.')
+                                ->warning()
+                                ->send();
+                        }
                     }),
             ])
             ->bulkActions([]);

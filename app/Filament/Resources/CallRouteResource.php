@@ -286,18 +286,21 @@ class CallRouteResource extends Resource
                         ]);
 
                         // Reload OpenSIPS modules after domain update
-                        try {
-                            $miService = app(\App\Services\OpenSIPSMIService::class);
-                            $miService->domainReload();
-                        } catch (\Exception $e) {
-                            \Log::warning('OpenSIPS MI reload failed after domain update', ['error' => $e->getMessage()]);
-                        }
+                        $miOk = app(\App\Services\OpenSIPSMIService::class)->domainReload();
 
-                        \Filament\Notifications\Notification::make()
-                            ->success()
-                            ->title('Domain updated')
-                            ->body('The domain has been updated and OpenSIPS modules reloaded.')
-                            ->send();
+                        if ($miOk) {
+                            \Filament\Notifications\Notification::make()
+                                ->success()
+                                ->title('Domain updated')
+                                ->body('The domain has been updated and OpenSIPS modules reloaded.')
+                                ->send();
+                        } else {
+                            \Filament\Notifications\Notification::make()
+                                ->warning()
+                                ->title('Domain updated — reload failed')
+                                ->body('The domain was updated, but OpenSIPS modules could not be reloaded. You may need to reload them manually.')
+                                ->send();
+                        }
                     }),
                 Tables\Actions\Action::make('manage_destinations')
                     ->iconButton()
@@ -326,12 +329,10 @@ class CallRouteResource extends Resource
                     })
                     ->after(function ($record) {
                         // Reload OpenSIPS modules after deletion
-                        try {
-                            $miService = app(\App\Services\OpenSIPSMIService::class);
-                            $miService->domainReload();
-                            $miService->dispatcherReload();
-                        } catch (\Exception $e) {
-                            \Log::warning('OpenSIPS MI reload failed after route deletion', ['error' => $e->getMessage()]);
+                        $miService = app(\App\Services\OpenSIPSMIService::class);
+                        $domainOk = $miService->domainReload();
+                        $dispatcherOk = $miService->dispatcherReload();
+                        if (! $domainOk || ! $dispatcherOk) {
                             // Store in session - will be checked in successNotification
                             session()->flash('opensips_mi_failed', true);
                         }
@@ -363,16 +364,11 @@ class CallRouteResource extends Resource
                         })
                         ->after(function ($records) {
                             // Reload OpenSIPS modules after bulk deletion
-                            $miReloadSuccess = true;
-                            try {
-                                $miService = app(\App\Services\OpenSIPSMIService::class);
-                                $miService->domainReload();
-                                $miService->dispatcherReload();
-                            } catch (\Exception $e) {
-                                \Log::warning('OpenSIPS MI reload failed after bulk route deletion', ['error' => $e->getMessage()]);
-                                $miReloadSuccess = false;
-                            }
-                            
+                            $miService = app(\App\Services\OpenSIPSMIService::class);
+                            $domainOk = $miService->domainReload();
+                            $dispatcherOk = $miService->dispatcherReload();
+                            $miReloadSuccess = $domainOk && $dispatcherOk;
+
                             // Store MI status in session to check in success notification
                             session()->put('last_delete_mi_status', $miReloadSuccess);
                         })

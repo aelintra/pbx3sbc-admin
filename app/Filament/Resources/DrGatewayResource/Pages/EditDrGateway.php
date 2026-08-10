@@ -22,7 +22,13 @@ class EditDrGateway extends EditRecord
         return [
             Actions\DeleteAction::make()
                 ->after(function () {
-                    app(OpenSIPSMIService::class)->drReload();
+                    if (! app(OpenSIPSMIService::class)->drReload()) {
+                        Notification::make()
+                            ->title('Peer deleted — reload failed')
+                            ->body('The peer was deleted, but OpenSIPS drouting reload (dr_reload) failed. Routing may be stale until reloaded.')
+                            ->warning()
+                            ->send();
+                    }
                 }),
         ];
     }
@@ -55,11 +61,18 @@ class EditDrGateway extends EditRecord
 
     protected function afterSave(): void
     {
-        app(OpenSIPSMIService::class)->drReload();
-        Notification::make()
-            ->title('Peer saved')
-            ->body('drouting reloaded (dr_reload).')
-            ->success()
-            ->send();
+        if (app(OpenSIPSMIService::class)->drReload()) {
+            Notification::make()
+                ->title('Peer saved')
+                ->body('drouting reloaded (dr_reload).')
+                ->success()
+                ->send();
+        } else {
+            Notification::make()
+                ->title('Peer saved — reload failed')
+                ->body('The peer was saved, but OpenSIPS drouting reload (dr_reload) failed. Routing may be stale until reloaded.')
+                ->warning()
+                ->send();
+        }
     }
 }

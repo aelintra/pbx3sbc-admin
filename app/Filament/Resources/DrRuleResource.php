@@ -291,10 +291,18 @@ class DrRuleResource extends Resource
             ])
             ->defaultSort('ruleid')
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->authorize(fn (DrRule $record): bool => static::canEdit($record)),
                 Tables\Actions\DeleteAction::make()
+                    ->authorize(fn (DrRule $record): bool => static::canDelete($record))
                     ->after(function () {
-                        app(\App\Services\OpenSIPSMIService::class)->drReload();
+                        if (! app(\App\Services\OpenSIPSMIService::class)->drReload()) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Route deleted — reload failed')
+                                ->body('The route was deleted, but OpenSIPS drouting reload (dr_reload) failed. Routing may be stale until reloaded.')
+                                ->warning()
+                                ->send();
+                        }
                     }),
             ])
             ->bulkActions([]);

@@ -35,12 +35,10 @@ class EditCallRoute extends EditRecord
                 })
                 ->after(function () {
                     // Reload OpenSIPS modules after deletion
-                    try {
-                        $miService = app(OpenSIPSMIService::class);
-                        $miService->domainReload();
-                        $miService->dispatcherReload();
-                    } catch (\Exception $e) {
-                        \Log::warning('OpenSIPS MI reload failed after route deletion', ['error' => $e->getMessage()]);
+                    $miService = app(OpenSIPSMIService::class);
+                    $domainOk = $miService->domainReload();
+                    $dispatcherOk = $miService->dispatcherReload();
+                    if (! $domainOk || ! $dispatcherOk) {
                         Notification::make()
                             ->warning()
                             ->title('OpenSIPS Module Reload Failed')
@@ -121,16 +119,10 @@ class EditCallRoute extends EditRecord
         }
 
         // Reload OpenSIPS modules
-        $miReloadSuccess = true;
-        try {
-            $miService = app(OpenSIPSMIService::class);
-            $miService->domainReload();
-            $miService->dispatcherReload();
-        } catch (\Exception $e) {
-            // Log but don't fail the operation
-            \Log::warning('OpenSIPS MI reload failed after route update', ['error' => $e->getMessage()]);
-            $miReloadSuccess = false;
-        }
+        $miService = app(OpenSIPSMIService::class);
+        $domainOk = $miService->domainReload();
+        $dispatcherOk = $miService->dispatcherReload();
+        $miReloadSuccess = $domainOk && $dispatcherOk;
 
         Notification::make()
             ->title('Domain route updated successfully')

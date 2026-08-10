@@ -7,6 +7,7 @@ use App\Filament\Concerns\HasPanelBackLink;
 use App\Filament\Resources\DispatcherResource;
 use App\Services\OpenSIPSMIService;
 use Filament\Actions;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
 class EditDispatcher extends EditRecord
@@ -42,11 +43,12 @@ class EditDispatcher extends EditRecord
         return [
             Actions\DeleteAction::make()
                 ->after(function () {
-                    try {
-                        $miService = app(OpenSIPSMIService::class);
-                        $miService->dispatcherReload();
-                    } catch (\Exception $e) {
-                        \Log::warning('OpenSIPS MI reload failed after destination deletion', ['error' => $e->getMessage()]);
+                    if (! app(OpenSIPSMIService::class)->dispatcherReload()) {
+                        Notification::make()
+                            ->title('Destination deleted — reload failed')
+                            ->body('The destination was deleted, but OpenSIPS dispatcher reload failed. Routing may be stale until reloaded.')
+                            ->warning()
+                            ->send();
                     }
                 })
                 ->successRedirectUrl(function () {
@@ -76,12 +78,12 @@ class EditDispatcher extends EditRecord
 
     protected function afterSave(): void
     {
-        // Reload OpenSIPS modules after update
-        try {
-            $miService = app(OpenSIPSMIService::class);
-            $miService->dispatcherReload();
-        } catch (\Exception $e) {
-            \Log::warning('OpenSIPS MI reload failed after destination update', ['error' => $e->getMessage()]);
+        if (! app(OpenSIPSMIService::class)->dispatcherReload()) {
+            Notification::make()
+                ->title('Destination saved — reload failed')
+                ->body('The destination was saved, but OpenSIPS dispatcher reload failed. Routing may be stale until reloaded.')
+                ->warning()
+                ->send();
         }
     }
 }

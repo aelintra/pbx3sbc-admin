@@ -20,12 +20,19 @@ class CreateDrRule extends CreateRecord
 
     protected function afterCreate(): void
     {
-        app(OpenSIPSMIService::class)->drReload();
-        Notification::make()
-            ->title('Routing rule created')
-            ->body('drouting reloaded (dr_reload).')
-            ->success()
-            ->send();
+        if (app(OpenSIPSMIService::class)->drReload()) {
+            Notification::make()
+                ->title('Routing rule created')
+                ->body('drouting reloaded (dr_reload).')
+                ->success()
+                ->send();
+        } else {
+            Notification::make()
+                ->title('Routing rule created — reload failed')
+                ->body('The rule was created, but OpenSIPS drouting reload (dr_reload) failed. Routing may be stale until reloaded.')
+                ->warning()
+                ->send();
+        }
 
         $hint = DrRulePrefixOverlap::nestingHint(
             $this->record->groupid,

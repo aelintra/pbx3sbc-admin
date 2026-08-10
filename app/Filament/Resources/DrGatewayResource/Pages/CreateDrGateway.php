@@ -28,11 +28,18 @@ class CreateDrGateway extends CreateRecord
 
     protected function afterCreate(): void
     {
-        app(OpenSIPSMIService::class)->drReload();
-        Notification::make()
-            ->title('Peer created')
-            ->body('drouting reloaded (dr_reload).')
-            ->success()
-            ->send();
+        if (app(OpenSIPSMIService::class)->drReload()) {
+            Notification::make()
+                ->title('Peer created')
+                ->body('drouting reloaded (dr_reload).')
+                ->success()
+                ->send();
+        } else {
+            Notification::make()
+                ->title('Peer created — reload failed')
+                ->body('The peer was created, but OpenSIPS drouting reload (dr_reload) failed. Routing may be stale until reloaded.')
+                ->warning()
+                ->send();
+        }
     }
 }

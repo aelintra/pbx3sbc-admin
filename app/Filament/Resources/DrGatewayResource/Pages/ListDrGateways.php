@@ -19,11 +19,18 @@ class ListDrGateways extends ListRecords
                 ->label('Reload drouting')
                 ->icon('heroicon-o-arrow-path')
                 ->action(function () {
-                    app(OpenSIPSMIService::class)->drReload();
-                    \Filament\Notifications\Notification::make()
-                        ->title('drouting reloaded')
-                        ->success()
-                        ->send();
+                    if (app(OpenSIPSMIService::class)->drReload()) {
+                        \Filament\Notifications\Notification::make()
+                            ->title('drouting reloaded')
+                            ->success()
+                            ->send();
+                    } else {
+                        \Filament\Notifications\Notification::make()
+                            ->title('drouting reload failed')
+                            ->body('OpenSIPS drouting reload (dr_reload) failed. Check MI connectivity.')
+                            ->danger()
+                            ->send();
+                    }
                 }),
         ];
     }

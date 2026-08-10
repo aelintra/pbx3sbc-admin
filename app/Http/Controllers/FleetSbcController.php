@@ -129,14 +129,15 @@ class FleetSbcController extends Controller
         $previous = (int) $domain->setid;
         $domain->setid = $destSetid;
         $domain->save();
-        $mi->domainReload();
+        $miOk = $mi->domainReload();
 
         return response()->json([
-            'ok' => true,
+            'ok' => $miOk,
             'tenant_domain' => $domainName,
             'previous_setid' => $previous,
             'dest_setid' => $destSetid,
-        ]);
+            'mi_reload_ok' => $miOk,
+        ], $miOk ? 200 : 502);
     }
 
     public function rollbackRepoint(Request $request, OpenSIPSMIService $mi): JsonResponse
@@ -156,13 +157,14 @@ class FleetSbcController extends Controller
 
         $domain->setid = $previousSetid;
         $domain->save();
-        $mi->domainReload();
+        $miOk = $mi->domainReload();
 
         return response()->json([
-            'ok' => true,
+            'ok' => $miOk,
             'tenant_domain' => $domainName,
             'restored_setid' => $previousSetid,
-        ]);
+            'mi_reload_ok' => $miOk,
+        ], $miOk ? 200 : 502);
     }
 
     /**
@@ -182,11 +184,19 @@ class FleetSbcController extends Controller
         }
 
         $result = \App\Services\FleetDidProjector::project($dids, $dryRun, $ensure);
-        if (! $dryRun && ($result['upserted'] !== [] || $result['removed'] !== [])) {
-            $mi->drReload();
-        }
 
-        return response()->json(array_merge(['dry_run' => $dryRun], $result), $result['ok'] ? 200 : 422);
+        $miOk = true;
+        if (! $dryRun && ($result['upserted'] !== [] || $result['removed'] !== [])) {
+            $miOk = $mi->drReload();
+        }
+        $result['mi_reload_ok'] = $miOk;
+
+        $projectorOk = $result['ok'];
+        $result['ok'] = $projectorOk && $miOk;
+
+        $status = ! $projectorOk ? 422 : ($miOk ? 200 : 502);
+
+        return response()->json(array_merge(['dry_run' => $dryRun], $result), $status);
     }
 
     /**
@@ -221,14 +231,15 @@ class FleetSbcController extends Controller
             $domain->setid = $setid;
             $domain->save();
         }
-        $mi->domainReload();
+        $miOk = $mi->domainReload();
 
         return response()->json([
-            'ok' => true,
+            'ok' => $miOk,
             'created' => $created,
             'domain' => $domainName,
             'setid' => $setid,
-        ]);
+            'mi_reload_ok' => $miOk,
+        ], $miOk ? 200 : 502);
     }
 
     /**
@@ -244,18 +255,20 @@ class FleetSbcController extends Controller
 
         $row = Domain::query()->where('domain', $domainName)->first();
         $deleted = false;
+        $miOk = true;
         if ($row !== null) {
             $row->delete();
             $deleted = true;
-            $mi->domainReload();
+            $miOk = $mi->domainReload();
         }
 
         return response()->json([
-            'ok' => true,
+            'ok' => $miOk,
             'deleted' => $deleted,
             'domain' => $domainName,
             'already_absent' => ! $deleted,
-        ]);
+            'mi_reload_ok' => $miOk,
+        ], $miOk ? 200 : 502);
     }
 
     /**
@@ -290,14 +303,17 @@ class FleetSbcController extends Controller
             return response()->json($result, 422);
         }
 
+        $miOk = true;
         if (! $dryRun) {
-            $mi->dispatcherReload();
+            $miOk = $mi->dispatcherReload() && $miOk;
             if (! empty($result['peer_created']) || ! empty($result['peer_updated'])) {
-                $mi->drReload();
+                $miOk = $mi->drReload() && $miOk;
             }
         }
+        $result['mi_reload_ok'] = $miOk;
+        $result['ok'] = $miOk;
 
-        return response()->json($result);
+        return response()->json($result, $miOk ? 200 : 502);
     }
 
     /**

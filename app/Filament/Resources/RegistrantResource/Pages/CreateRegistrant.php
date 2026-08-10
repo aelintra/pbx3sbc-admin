@@ -29,11 +29,18 @@ class CreateRegistrant extends CreateRecord
 
     protected function afterCreate(): void
     {
-        app(OpenSIPSMIService::class)->regReload();
-        Notification::make()
-            ->title('Registration created')
-            ->body('uac_registrant reloaded (reg_reload).')
-            ->success()
-            ->send();
+        if (app(OpenSIPSMIService::class)->regReload()) {
+            Notification::make()
+                ->title('Registration created')
+                ->body('uac_registrant reloaded (reg_reload).')
+                ->success()
+                ->send();
+        } else {
+            Notification::make()
+                ->title('Registration created — reload failed')
+                ->body('The registration was created, but OpenSIPS uac_registrant reload (reg_reload) failed.')
+                ->warning()
+                ->send();
+        }
     }
 }

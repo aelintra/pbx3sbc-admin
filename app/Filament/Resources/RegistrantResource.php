@@ -179,7 +179,13 @@ class RegistrantResource extends Resource
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
                     ->after(function () {
-                        app(OpenSIPSMIService::class)->regReload();
+                        if (! app(OpenSIPSMIService::class)->regReload()) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Registration deleted — reload failed')
+                                ->body('The registration was deleted, but OpenSIPS uac_registrant reload (reg_reload) failed.')
+                                ->warning()
+                                ->send();
+                        }
                     }),
             ])
             ->bulkActions([]);

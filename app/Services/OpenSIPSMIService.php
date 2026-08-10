@@ -57,23 +57,31 @@ class OpenSIPSMIService
     }
 
     /**
-     * Reload domain module
+     * Reload domain module.
+     *
+     * @return bool true on confirmed MI success; false if MI is unreachable or errored
+     *              (logged as a warning either way — callers must not report success on false).
      */
-    public function domainReload(): void
+    public function domainReload(): bool
     {
         try {
             $this->call('domain_reload');
             Log::info('OpenSIPS domain module reloaded successfully');
+
+            return true;
         } catch (\Exception $e) {
-            // Log but don't throw - MI might not be available
             Log::warning('OpenSIPS domain reload failed', ['error' => $e->getMessage()]);
+
+            return false;
         }
     }
 
     /**
-     * Reload dispatcher module
+     * Reload dispatcher module.
+     *
+     * @return bool true on confirmed MI success; false if MI is unreachable or errored.
      */
-    public function dispatcherReload(): void
+    public function dispatcherReload(): bool
     {
         try {
             // OpenSIPS 3.6 uses ds_reload; 4.x renamed to dispatcher_reload
@@ -83,35 +91,50 @@ class OpenSIPSMIService
                 $this->call('dispatcher_reload');
             }
             Log::info('OpenSIPS dispatcher module reloaded successfully');
+
+            return true;
         } catch (\Exception $e) {
-            // Log but don't throw - MI might not be available
             Log::warning('OpenSIPS dispatcher reload failed', ['error' => $e->getMessage()]);
+
+            return false;
         }
     }
 
     /**
-     * Reload drouting module (dr_gateways / dr_rules)
+     * Reload drouting module (dr_gateways / dr_rules).
+     *
+     * @return bool true on confirmed MI success; false if MI is unreachable or errored.
      */
-    public function drReload(): void
+    public function drReload(): bool
     {
         try {
             $this->call('dr_reload');
             Log::info('OpenSIPS drouting module reloaded successfully');
+
+            return true;
         } catch (\Exception $e) {
             Log::warning('OpenSIPS drouting reload failed', ['error' => $e->getMessage()]);
+
+            return false;
         }
     }
 
     /**
-     * Reload uac_registrant module (registrant table)
+     * Reload uac_registrant module (registrant table).
+     *
+     * @return bool true on confirmed MI success; false if MI is unreachable or errored.
      */
-    public function regReload(): void
+    public function regReload(): bool
     {
         try {
             $this->call('reg_reload');
             Log::info('OpenSIPS uac_registrant module reloaded successfully');
+
+            return true;
         } catch (\Exception $e) {
             Log::warning('OpenSIPS registrant reload failed', ['error' => $e->getMessage()]);
+
+            return false;
         }
     }
 

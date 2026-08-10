@@ -7,6 +7,7 @@ use App\Filament\Concerns\HasPanelBackLink;
 use App\Filament\Resources\DispatcherResource;
 use App\Services\OpenSIPSMIService;
 use Filament\Actions;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateDispatcher extends CreateRecord
@@ -80,12 +81,12 @@ class CreateDispatcher extends CreateRecord
 
     protected function afterCreate(): void
     {
-        // Reload OpenSIPS modules after creation
-        try {
-            $miService = app(OpenSIPSMIService::class);
-            $miService->dispatcherReload();
-        } catch (\Exception $e) {
-            \Log::warning('OpenSIPS MI reload failed after destination creation', ['error' => $e->getMessage()]);
+        if (! app(OpenSIPSMIService::class)->dispatcherReload()) {
+            Notification::make()
+                ->title('Destination created — reload failed')
+                ->body('The destination was created, but OpenSIPS dispatcher reload failed. Routing may be stale until reloaded.')
+                ->warning()
+                ->send();
         }
     }
 

@@ -42,18 +42,31 @@ class EditRegistrant extends EditRecord
         return [
             Actions\DeleteAction::make()
                 ->after(function () {
-                    app(OpenSIPSMIService::class)->regReload();
+                    if (! app(OpenSIPSMIService::class)->regReload()) {
+                        Notification::make()
+                            ->title('Registration deleted — reload failed')
+                            ->body('The registration was deleted, but OpenSIPS uac_registrant reload (reg_reload) failed.')
+                            ->warning()
+                            ->send();
+                    }
                 }),
         ];
     }
 
     protected function afterSave(): void
     {
-        app(OpenSIPSMIService::class)->regReload();
-        Notification::make()
-            ->title('Registration saved')
-            ->body('uac_registrant reloaded (reg_reload).')
-            ->success()
-            ->send();
+        if (app(OpenSIPSMIService::class)->regReload()) {
+            Notification::make()
+                ->title('Registration saved')
+                ->body('uac_registrant reloaded (reg_reload).')
+                ->success()
+                ->send();
+        } else {
+            Notification::make()
+                ->title('Registration saved — reload failed')
+                ->body('The registration was saved, but OpenSIPS uac_registrant reload (reg_reload) failed.')
+                ->warning()
+                ->send();
+        }
     }
 }
