@@ -71,6 +71,34 @@ class FleetDidProjector
         return $s;
     }
 
+    /**
+     * Resolve dispatcher setid for an Asterisk gwid (attrs setid=N, or destination match).
+     */
+    public static function resolveSetidFromGwid(string $gwid): ?int
+    {
+        $gwid = trim($gwid);
+        if ($gwid === '') {
+            return null;
+        }
+
+        $gw = DrGateway::query()->where('gwid', $gwid)->first();
+        if ($gw === null) {
+            return null;
+        }
+
+        $parsed = DrGateway::parseAttrs($gw->attrs);
+        if (isset($parsed['setid']) && (int) $parsed['setid'] >= 1) {
+            return (int) $parsed['setid'];
+        }
+
+        $addr = self::normalizeAddress((string) $gw->address);
+        $dest = Dispatcher::query()->get()->first(function (Dispatcher $d) use ($addr) {
+            return self::normalizeAddress((string) $d->destination) === $addr;
+        });
+
+        return $dest !== null ? (int) $dest->setid : null;
+    }
+
     public static function fleetAttrs(string $tenantShortuid, string $e164Key): string
     {
         return DrGateway::formatAttrs([

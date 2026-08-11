@@ -7,11 +7,9 @@ use App\Models\User;
 use App\Services\FleetDidProjector;
 
 /**
- * Fleet-owned dr_rules (attrs fleet=did;...) are projected by FleetDidProjector
- * from the catalog and must not be hand-edited in Filament — the projector
- * will just overwrite/remove them on the next sync, and manual edits can
- * silently desync catalog vs SBC routing. Standalone (non-fleet) rules are
- * unrestricted.
+ * Fleet-owned dr_rules (attrs fleet=did;...) are projected from the catalog.
+ * Magrathea must not offer edit/delete — retarget via Fleet DIDs only
+ * (FLEET_DID_HOP1_LOCK.md / Rule 13). Standalone (non-fleet) rules unrestricted.
  */
 class DrRulePolicy
 {

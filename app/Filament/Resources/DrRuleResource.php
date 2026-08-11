@@ -6,6 +6,7 @@ use App\Filament\Resources\DrRuleResource\Pages;
 use App\Models\DrGateway;
 use App\Models\DrRule;
 use App\Services\DrRulePrefixOverlap;
+use App\Services\FleetDidProjector;
 use Filament\Forms;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -246,7 +247,21 @@ class DrRuleResource extends Resource
                     ->label('Prefix')
                     ->searchable()
                     ->sortable()
-                    ->placeholder('(default)'),
+                    ->placeholder('(default)')
+                    ->description(fn (DrRule $record): ?string => FleetDidProjector::isFleetOwned($record->attrs)
+                        ? 'Fleet-owned — retarget in Fleet DIDs'
+                        : null),
+                Tables\Columns\IconColumn::make('fleet_owned')
+                    ->label('Fleet')
+                    ->boolean()
+                    ->getStateUsing(fn (DrRule $record): bool => FleetDidProjector::isFleetOwned($record->attrs))
+                    ->trueIcon('lucide-lock')
+                    ->falseIcon('lucide-pencil')
+                    ->trueColor('warning')
+                    ->falseColor('gray')
+                    ->tooltip(fn (DrRule $record): string => FleetDidProjector::isFleetOwned($record->attrs)
+                        ? 'Projected from Fleet catalog — edit/delete not offered'
+                        : 'Standalone / edge-authored'),
                 Tables\Columns\TextColumn::make('gwlist')
                     ->label('Goes to')
                     ->formatStateUsing(fn (?string $state) => DrGateway::labelsForGwlist($state))

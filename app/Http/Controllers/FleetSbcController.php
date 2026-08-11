@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Dispatcher;
 use App\Models\Domain;
+use App\Models\DrGateway;
+use App\Models\DrRule;
+use App\Services\FleetDidProjector;
 use App\Services\OpenSIPSMIService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -165,6 +168,43 @@ class FleetSbcController extends Controller
             'restored_setid' => $previousSetid,
             'mi_reload_ok' => $miOk,
         ], $miOk ? 200 : 502);
+    }
+
+    /**
+     * S10.5 — list fleet-owned inbound DID delivery rules (catalog reconcile).
+     *
+     * @return list<array{prefix: string, tenant_shortuid: string, e164_key: string, gwid: string|null, setid: int|null, ruleid: int}>
+     */
+    public function listDidRules(): JsonResponse
+    {
+        $rows = DrRule::query()
+            ->where('groupid', FleetDidProjector::INBOUND_GROUP)
+            ->orderBy('prefix')
+            ->get()
+            ->filter(static fn (DrRule $r): bool => FleetDidProjector::isFleetOwned($r->attrs));
+
+        $out = [];
+        foreach ($rows as $rule) {
+            $parsed = DrGateway::parseAttrs($rule->attrs);
+            $gwlist = trim((string) $rule->gwlist);
+            $gwid = $gwlist !== '' ? trim(explode(',', $gwlist)[0]) : null;
+            $setid = $gwid !== null && $gwid !== ''
+                ? FleetDidProjector::resolveSetidFromGwid($gwid)
+                : null;
+            $out[] = [
+                'prefix' => (string) $rule->prefix,
+                'tenant_shortuid' => (string) ($parsed['tenant'] ?? ''),
+                'e164_key' => (string) ($parsed['e164_key'] ?? ''),
+                'gwid' => $gwid,
+                'setid' => $setid,
+                'ruleid' => (int) $rule->ruleid,
+            ];
+        }
+
+        return response()->json([
+            'ok' => true,
+            'rules' => array_values($out),
+        ]);
     }
 
     /**
