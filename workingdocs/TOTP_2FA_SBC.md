@@ -15,6 +15,8 @@
 5. Confirm with a live code; **save recovery codes** shown once.
 6. Next login: password → challenge screen → TOTP (or a recovery code).
 
+**UX:** Challenge / confirm placeholders are **`XXXXXX`** (no hyphen). Codes with spaces or hyphens are normalized to digits before verify.
+
 `install.sh` does **not** prompt for 2FA at create-admin time.
 
 ---

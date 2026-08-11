@@ -161,4 +161,82 @@ class DrRulePrefixOverlap
 
         return $bits === [] ? null : implode(' ', $bits);
     }
+
+    /**
+     * Pure: first parent/child nest against fleet-owned prefixes (unit-tested).
+     *
+     * @param  list<array{ruleid:int, prefix:string, description?:string}>  $fleetRules
+     * @return array{relation: 'under'|'above', ruleid: int, prefix: string, description: string}|null
+     */
+    public static function findFleetNestConflict(string $prefix, array $fleetRules): ?array
+    {
+        $classified = self::classify($prefix, $fleetRules);
+        if ($classified['parents'] !== []) {
+            $r = $classified['parents'][0];
+
+            return [
+                'relation' => 'under',
+                'ruleid' => (int) $r['ruleid'],
+                'prefix' => (string) $r['prefix'],
+                'description' => (string) ($r['description'] ?? ''),
+            ];
+        }
+        if ($classified['children'] !== []) {
+            $r = $classified['children'][0];
+
+            return [
+                'relation' => 'above',
+                'ruleid' => (int) $r['ruleid'],
+                'prefix' => (string) $r['prefix'],
+                'description' => (string) ($r['description'] ?? ''),
+            ];
+        }
+
+        return null;
+    }
+
+    public static function formatFleetNestBlockMessage(array $conflict): string
+    {
+        $label = ($conflict['description'] ?? '') !== '' ? " — {$conflict['description']}" : '';
+        $relation = ($conflict['relation'] ?? '') === 'under' ? 'under' : 'above';
+
+        return 'Cannot place this inbound prefix '.$relation
+            ." Fleet-owned rule {$conflict['ruleid']} (prefix “{$conflict['prefix']}”{$label}). "
+            .'OpenSIPS longest-prefix match would subdivide or shadow hop-1 delivery. '
+            .'Retarget in Fleet → DIDs — Magrathea must not nest with fleet=did routes.';
+    }
+
+    /**
+     * Inbound (groupid 1) only — hard-block create/update that nests with fleet=did.
+     */
+    public static function fleetNestingBlockMessage(string|int $groupid, ?string $prefix, ?int $excludeRuleid = null): ?string
+    {
+        if ((string) $groupid !== FleetDidProjector::INBOUND_GROUP) {
+            return null;
+        }
+
+        $norm = self::normalize($prefix);
+        if ($norm === '') {
+            return null;
+        }
+
+        $fleetRules = DrRule::query()
+            ->where('groupid', FleetDidProjector::INBOUND_GROUP)
+            ->when($excludeRuleid !== null, fn ($q) => $q->where('ruleid', '!=', $excludeRuleid))
+            ->orderBy('ruleid')
+            ->get()
+            ->filter(static fn (DrRule $r): bool => FleetDidProjector::isFleetOwned($r->attrs))
+            ->map(static fn (DrRule $r): array => [
+                'ruleid' => (int) $r->ruleid,
+                'prefix' => self::normalize($r->prefix),
+                'description' => (string) ($r->description ?? ''),
+            ])
+            ->filter(static fn (array $row): bool => $row['prefix'] !== '')
+            ->values()
+            ->all();
+
+        $conflict = self::findFleetNestConflict($norm, $fleetRules);
+
+        return $conflict === null ? null : self::formatFleetNestBlockMessage($conflict);
+    }
 }

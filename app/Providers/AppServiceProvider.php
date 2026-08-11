@@ -6,6 +6,8 @@ use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\ViewAction;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
+use App\Livewire\TwoFactorAuthentication;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,5 +46,8 @@ class AppServiceProvider extends ServiceProvider
                 ->icon('lucide-eye')
                 ->tooltip('View');
         });
+
+        // Breezy boot registers vendor Livewire name — re-bind so profile enroll uses our strip/placeholder.
+        Livewire::component('two_factor_authentication', TwoFactorAuthentication::class);
     }
 }

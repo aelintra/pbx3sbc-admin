@@ -59,4 +59,36 @@ class DrRulePrefixOverlapTest extends TestCase
         $this->assertStringContainsString('Nested under rule 5', $hint);
         $this->assertStringContainsString('01924', $hint);
     }
+
+    public function test_find_fleet_nest_conflict_under_block(): void
+    {
+        $hit = DrRulePrefixOverlap::findFleetNestConflict('01924918076', [
+            ['ruleid' => 28, 'prefix' => '01924918', 'description' => 'fleet block'],
+        ]);
+
+        $this->assertNotNull($hit);
+        $this->assertSame('under', $hit['relation']);
+        $this->assertSame(28, $hit['ruleid']);
+        $msg = DrRulePrefixOverlap::formatFleetNestBlockMessage($hit);
+        $this->assertStringContainsString('under', $msg);
+        $this->assertStringContainsString('Fleet → DIDs', $msg);
+    }
+
+    public function test_find_fleet_nest_conflict_above_singleton(): void
+    {
+        $hit = DrRulePrefixOverlap::findFleetNestConflict('019249', [
+            ['ruleid' => 28, 'prefix' => '01924918076', 'description' => 'fleet singleton'],
+        ]);
+
+        $this->assertNotNull($hit);
+        $this->assertSame('above', $hit['relation']);
+        $this->assertSame(28, $hit['ruleid']);
+    }
+
+    public function test_find_fleet_nest_conflict_none_for_unrelated(): void
+    {
+        $this->assertNull(DrRulePrefixOverlap::findFleetNestConflict('02079460000', [
+            ['ruleid' => 28, 'prefix' => '01924918076'],
+        ]));
+    }
 }

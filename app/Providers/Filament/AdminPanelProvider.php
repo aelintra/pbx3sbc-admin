@@ -20,6 +20,8 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Illuminate\Support\Facades\Blade;
+use App\Filament\Pages\Auth\TwoFactorPage;
+use App\Livewire\TwoFactorAuthentication;
 use Jeffgreco13\FilamentBreezy\BreezyCore;
 
 class AdminPanelProvider extends PanelProvider
@@ -43,7 +45,14 @@ class AdminPanelProvider extends PanelProvider
                         hasAvatars: false,
                         slug: 'my-profile',
                     )
-                    ->enableTwoFactorAuthentication(force: false),
+                    ->enableTwoFactorAuthentication(
+                        force: false,
+                        action: TwoFactorPage::class,
+                    )
+                    // After enableTwoFactorAuthentication: our class wins merge over vendor default in boot().
+                    ->myProfileComponents([
+                        'two_factor_authentication' => TwoFactorAuthentication::class,
+                    ]),
             )
             ->brandLogo(fn () => view('filament.hooks.sidebar-brand'))
             ->brandLogoHeight('2.5rem')

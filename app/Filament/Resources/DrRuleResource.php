@@ -79,6 +79,17 @@ class DrRuleResource extends Resource
                                             $shown = DrRulePrefixOverlap::normalize($dup->prefix);
                                             $shown = $shown === '' ? '(default / empty)' : "“{$shown}”";
                                             $fail("Another route already uses this direction and prefix {$shown} (rule {$dup->ruleid}{$label}).");
+
+                                            return;
+                                        }
+
+                                        $fleetBlock = DrRulePrefixOverlap::fleetNestingBlockMessage(
+                                            $groupid,
+                                            is_string($value) ? $value : null,
+                                            $exclude
+                                        );
+                                        if ($fleetBlock !== null) {
+                                            $fail($fleetBlock);
                                         }
                                     };
                                 },
