@@ -39,13 +39,17 @@ class Backup extends Page
 
     public bool $uploadToS3 = true;
 
+    /** True until first (or in-progress) list completes — S3 merge can be slow. */
+    public bool $loading = true;
+
     public function mount(): void
     {
-        $this->refresh();
+        // S3 list is deferred to wire:init so the page can paint a spinner first.
     }
 
     public function refresh(): void
     {
+        $this->loading = true;
         $this->loadError = '';
         try {
             $svc = app(SbcBackupService::class);
@@ -64,6 +68,8 @@ class Backup extends Page
         } catch (\Throwable $e) {
             $this->loadError = $e->getMessage();
             $this->backups = [];
+        } finally {
+            $this->loading = false;
         }
     }
 

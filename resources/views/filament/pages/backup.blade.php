@@ -1,5 +1,6 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
+    {{-- wire:init defers S3 list so first paint can show a spinner --}}
+    <div class="space-y-6" wire:init="refresh">
         <x-filament::section>
             <x-slot name="heading">
                 Cold DR backup
@@ -45,7 +46,7 @@
                         type="checkbox"
                         wire:model="uploadToS3"
                         class="rounded border-gray-300"
-                        @disabled(! $vipHolder || $creating)
+                        @disabled(! $vipHolder || $creating || $loading)
                     />
                     Upload to S3 after create
                 </label>
@@ -53,19 +54,36 @@
                     type="button"
                     wire:click="createBackup"
                     wire:loading.attr="disabled"
-                    :disabled="! $vipHolder || $creating"
+                    wire:target="createBackup"
+                    :disabled="! $vipHolder || $creating || $loading"
                     icon="lucide-hard-drive"
                 >
                     <span wire:loading.remove wire:target="createBackup">Backup now</span>
-                    <span wire:loading wire:target="createBackup">Creating…</span>
+                    <span wire:loading wire:target="createBackup" class="inline-flex items-center gap-2">
+                        <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Creating…
+                    </span>
                 </x-filament::button>
                 <x-filament::button
                     type="button"
                     color="gray"
                     wire:click="refresh"
+                    wire:loading.attr="disabled"
+                    wire:target="refresh"
+                    :disabled="$loading || $creating"
                     icon="lucide-refresh-cw"
                 >
-                    Refresh list
+                    <span wire:loading.remove wire:target="refresh">Refresh list</span>
+                    <span wire:loading wire:target="refresh" class="inline-flex items-center gap-2">
+                        <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading…
+                    </span>
                 </x-filament::button>
             </div>
         </x-filament::section>
@@ -82,54 +100,90 @@
                 Restore from CLI — not from this panel.
             </x-slot>
 
-            @if (count($backups) === 0)
-                <p class="text-sm text-gray-500">No local or S3 archives found yet.</p>
+            @if ($loading)
+                <div
+                    class="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <svg class="mt-0.5 h-5 w-5 shrink-0 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <div>
+                        <p class="font-medium">Loading archives…</p>
+                        <p class="mt-0.5 text-blue-800/80">Fetching the local + S3 backup list. This can take a moment.</p>
+                    </div>
+                </div>
             @else
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead>
-                            <tr class="border-b border-gray-200 text-gray-500">
-                                <th class="py-2 pr-4 font-medium">Created (UTC)</th>
-                                <th class="py-2 pr-4 font-medium">Archive ID</th>
-                                <th
-                                    class="py-2 pr-4 font-medium"
-                                    title="Zip name (sbcbak.{epoch}.zip). S3-only rows have no copy on this host."
-                                >
-                                    Filename
-                                </th>
-                                <th class="py-2 font-medium">Size</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            @foreach ($backups as $row)
-                                <tr>
-                                    <td class="py-2 pr-4 text-gray-900">{{ $row['created_at'] ?: '—' }}</td>
-                                    <td class="py-2 pr-4 font-mono text-xs text-gray-700">{{ $row['backup_stamp'] ?: '—' }}</td>
-                                    <td class="py-2 pr-4 font-mono text-xs text-gray-700">
-                                        {{ $row['name'] ?: '—' }}
-                                        @if (! empty($row['has_s3']) && empty($row['has_local']))
-                                            <span
-                                                class="ml-1 inline-flex rounded bg-sky-50 px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-sky-800"
-                                                title="Archive only on S3 — restore via CLI (fetch-latest / restore-sbc-backup)"
-                                            >S3</span>
-                                        @elseif (! empty($row['on_s3']) || (! empty($row['has_local']) && ! empty($row['has_s3'])))
-                                            <span
-                                                class="ml-1 inline-flex rounded bg-green-50 px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-green-800"
-                                                title="Local zip and S3 archive"
-                                            >local+S3</span>
-                                        @endif
-                                    </td>
-                                    <td class="py-2 text-gray-700">
-                                        @if ((int) ($row['bytes'] ?? 0) > 0)
-                                            {{ \App\Filament\Pages\Backup::formatBytes((int) $row['bytes']) }}
-                                        @else
-                                            —
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                <div
+                    wire:loading.flex
+                    wire:target="refresh"
+                    class="hidden items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <svg class="mt-0.5 h-5 w-5 shrink-0 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <div>
+                        <p class="font-medium">Loading archives…</p>
+                        <p class="mt-0.5 text-blue-800/80">Fetching the local + S3 backup list. This can take a moment.</p>
+                    </div>
+                </div>
+
+                <div wire:loading.remove wire:target="refresh">
+                    @if (count($backups) === 0)
+                        <p class="text-sm text-gray-500">No local or S3 archives found yet.</p>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead>
+                                    <tr class="border-b border-gray-200 text-gray-500">
+                                        <th class="py-2 pr-4 font-medium">Created (UTC)</th>
+                                        <th class="py-2 pr-4 font-medium">Archive ID</th>
+                                        <th
+                                            class="py-2 pr-4 font-medium"
+                                            title="Zip name (sbcbak.{epoch}.zip). S3-only rows have no copy on this host."
+                                        >
+                                            Filename
+                                        </th>
+                                        <th class="py-2 font-medium">Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    @foreach ($backups as $row)
+                                        <tr>
+                                            <td class="py-2 pr-4 text-gray-900">{{ $row['created_at'] ?: '—' }}</td>
+                                            <td class="py-2 pr-4 font-mono text-xs text-gray-700">{{ $row['backup_stamp'] ?: '—' }}</td>
+                                            <td class="py-2 pr-4 font-mono text-xs text-gray-700">
+                                                {{ $row['name'] ?: '—' }}
+                                                @if (! empty($row['has_s3']) && empty($row['has_local']))
+                                                    <span
+                                                        class="ml-1 inline-flex rounded bg-sky-50 px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-sky-800"
+                                                        title="Archive only on S3 — restore via CLI (fetch-latest / restore-sbc-backup)"
+                                                    >S3</span>
+                                                @elseif (! empty($row['on_s3']) || (! empty($row['has_local']) && ! empty($row['has_s3'])))
+                                                    <span
+                                                        class="ml-1 inline-flex rounded bg-green-50 px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-green-800"
+                                                        title="Local zip and S3 archive"
+                                                    >local+S3</span>
+                                                @endif
+                                            </td>
+                                            <td class="py-2 text-gray-700">
+                                                @if ((int) ($row['bytes'] ?? 0) > 0)
+                                                    {{ \App\Filament\Pages\Backup::formatBytes((int) $row['bytes']) }}
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
                 </div>
             @endif
         </x-filament::section>
