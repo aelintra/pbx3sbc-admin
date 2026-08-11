@@ -4,7 +4,9 @@ namespace App\Filament\Resources\DispatcherResource\Pages;
 
 use App\Filament\Concerns\HasPanelBackLink;
 
+use App\Filament\Resources\CallRouteResource;
 use App\Filament\Resources\DispatcherResource;
+use App\Services\FleetDomainOwnership;
 use App\Services\OpenSIPSMIService;
 use Filament\Actions;
 use Filament\Notifications\Notification;
@@ -15,6 +17,22 @@ class EditDispatcher extends EditRecord
     use HasPanelBackLink;
 
     protected static string $resource = DispatcherResource::class;
+
+    public function mount(int | string $record): void
+    {
+        parent::mount($record);
+
+        if (! FleetDomainOwnership::destinationMutateAllowed($this->record)) {
+            Notification::make()
+                ->title('Fleet owns this destination')
+                ->body('Change backends via Fleet Instances / node provision. Magrathea cannot edit fleet-locked destinations.')
+                ->warning()
+                ->persistent()
+                ->send();
+
+            $this->redirect(CallRouteResource::getUrl('index'));
+        }
+    }
 
     protected function getPanelBackUrl(): string
     {
@@ -42,6 +60,7 @@ class EditDispatcher extends EditRecord
     {
         return [
             Actions\DeleteAction::make()
+                ->authorize(fn (): bool => DispatcherResource::canDelete($this->record))
                 ->after(function () {
                     if (! app(OpenSIPSMIService::class)->dispatcherReload()) {
                         Notification::make()

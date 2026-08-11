@@ -4,7 +4,9 @@ namespace App\Filament\Resources\DispatcherResource\Pages;
 
 use App\Filament\Concerns\HasPanelBackLink;
 
+use App\Filament\Resources\CallRouteResource;
 use App\Filament\Resources\DispatcherResource;
+use App\Services\FleetDomainOwnership;
 use App\Services\OpenSIPSMIService;
 use Filament\Actions;
 use Filament\Notifications\Notification;
@@ -17,6 +19,23 @@ class CreateDispatcher extends CreateRecord
     protected static string $resource = DispatcherResource::class;
     
     protected static bool $canCreateAnother = false;
+
+    public function mount(): void
+    {
+        parent::mount();
+
+        $setid = $this->getSetidFromFilter();
+        if ($setid !== null && FleetDomainOwnership::setidIsFleetLocked($setid)) {
+            Notification::make()
+                ->title('Fleet owns destinations for this set')
+                ->body('Change backends via Fleet Instances / node provision. Magrathea cannot add destinations here.')
+                ->warning()
+                ->persistent()
+                ->send();
+
+            $this->redirect(CallRouteResource::getUrl('index'));
+        }
+    }
 
     protected function getPanelBackUrl(): string
     {
@@ -63,6 +82,13 @@ class CreateDispatcher extends CreateRecord
         $setidFilter = $this->getSetidFromFilter();
         if ($setidFilter !== null) {
             $data['setid'] = $setidFilter;
+        }
+
+        $setid = (int) ($data['setid'] ?? 0);
+        if ($setid >= 1 && FleetDomainOwnership::setidIsFleetLocked($setid)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'destination' => 'Fleet owns destinations for this set — change backends via Fleet Instances / node provision.',
+            ]);
         }
         
         return $data;

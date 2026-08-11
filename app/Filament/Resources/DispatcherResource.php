@@ -4,8 +4,10 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\DispatcherResource\Pages;
 use App\Models\Dispatcher;
+use App\Services\FleetDomainOwnership;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -156,9 +158,14 @@ class DispatcherResource extends Resource
                     ])
                     ->label('State'),
             ])
+            ->checkIfRecordIsSelectableUsing(
+                fn (Dispatcher $record): bool => FleetDomainOwnership::destinationMutateAllowed($record)
+            )
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->authorize(fn (Dispatcher $record): bool => static::canEdit($record)),
                 Tables\Actions\DeleteAction::make()
+                    ->authorize(fn (Dispatcher $record): bool => static::canDelete($record))
                     ->successRedirectUrl(function ($record, $livewire) {
                         // Preserve setid filter after deletion
                         // Get setid from the record being deleted (most reliable)
@@ -190,7 +197,19 @@ class DispatcherResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->before(function ($records) {
+                            foreach ($records as $record) {
+                                if (! FleetDomainOwnership::destinationMutateAllowed($record)) {
+                                    Notification::make()
+                                        ->title('Fleet owns destinations for this set')
+                                        ->body('Change backends via Fleet Instances / node provision. Magrathea must not edit fleet-locked destinations.')
+                                        ->danger()
+                                        ->send();
+                                    throw new \Filament\Support\Exceptions\Halt;
+                                }
+                            }
+                        }),
                 ]),
             ]);
     }

@@ -6,6 +6,7 @@ use App\Filament\Concerns\HasPanelBackLink;
 
 use App\Filament\Resources\CallRouteResource;
 use App\Models\Dispatcher;
+use App\Services\FleetDomainOwnership;
 use App\Services\OpenSIPSMIService;
 use Filament\Actions;
 use Filament\Notifications\Notification;
@@ -18,6 +19,22 @@ class EditCallRoute extends EditRecord
 
     protected static string $resource = CallRouteResource::class;
 
+    public function mount(int | string $record): void
+    {
+        parent::mount($record);
+
+        if (FleetDomainOwnership::isFleetOwned($this->record->attrs)) {
+            Notification::make()
+                ->title('Fleet owns this domain route')
+                ->body('Change tenant home via Fleet (move / Repair SBC domain / reconcile project). Magrathea cannot edit fleet=domain Domain Routes.')
+                ->warning()
+                ->persistent()
+                ->send();
+
+            $this->redirect(CallRouteResource::getUrl('index'));
+        }
+    }
+
     public function getHeading(): string
     {
         return 'Edit Domain Route: ' . $this->record->domain;
@@ -28,6 +45,7 @@ class EditCallRoute extends EditRecord
         return [
             Actions\ViewAction::make(),
             Actions\DeleteAction::make()
+                ->authorize(fn (): bool => CallRouteResource::canDelete($this->record))
                 ->before(function () {
                     // Delete associated dispatchers before deleting domain
                     $domain = $this->record;

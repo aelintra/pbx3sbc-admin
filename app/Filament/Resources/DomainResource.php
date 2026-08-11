@@ -63,13 +63,30 @@ class DomainResource extends Resource
                 Tables\Filters\SelectFilter::make('setid')
                     ->label('Set ID'),
             ])
+            ->checkIfRecordIsSelectableUsing(
+                fn (Domain $record): bool => ! \App\Services\FleetDomainOwnership::isFleetOwned($record->attrs)
+            )
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->authorize(fn (Domain $record): bool => static::canEdit($record)),
+                Tables\Actions\DeleteAction::make()
+                    ->authorize(fn (Domain $record): bool => static::canDelete($record)),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->before(function ($records) {
+                            foreach ($records as $record) {
+                                if (\App\Services\FleetDomainOwnership::isFleetOwned($record->attrs)) {
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Fleet-owned domains cannot be deleted here')
+                                        ->body('Use Fleet Delete. Magrathea must not delete fleet=domain rows.')
+                                        ->danger()
+                                        ->send();
+                                    throw new \Filament\Support\Exceptions\Halt;
+                                }
+                            }
+                        }),
                 ]),
             ]);
     }

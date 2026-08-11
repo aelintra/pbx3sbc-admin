@@ -7,6 +7,7 @@ use App\Models\Domain;
 use App\Models\DrGateway;
 use App\Models\DrRule;
 use App\Services\FleetDidProjector;
+use App\Services\FleetDomainOwnership;
 use App\Services\OpenSIPSMIService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,10 +33,11 @@ class FleetSbcController extends Controller
     {
         $domains = Domain::query()
             ->orderBy('domain')
-            ->get(['domain', 'setid'])
+            ->get(['domain', 'setid', 'attrs'])
             ->map(static fn (Domain $d): array => [
                 'domain' => (string) $d->domain,
                 'setid' => (int) $d->setid,
+                'fleet_owned' => FleetDomainOwnership::isFleetOwned($d->attrs),
             ])
             ->values()
             ->all();
@@ -131,6 +133,7 @@ class FleetSbcController extends Controller
 
         $previous = (int) $domain->setid;
         $domain->setid = $destSetid;
+        FleetDomainOwnership::stamp($domain);
         $domain->save();
         $miOk = $mi->domainReload();
 
@@ -159,6 +162,7 @@ class FleetSbcController extends Controller
         }
 
         $domain->setid = $previousSetid;
+        FleetDomainOwnership::stamp($domain);
         $domain->save();
         $miOk = $mi->domainReload();
 
@@ -258,6 +262,7 @@ class FleetSbcController extends Controller
             ], 422);
         }
 
+        $tenant = trim((string) $request->input('tenant_shortuid', ''));
         $domain = Domain::query()->where('domain', $domainName)->first();
         $created = false;
         if ($domain === null) {
@@ -265,10 +270,12 @@ class FleetSbcController extends Controller
                 'domain' => $domainName,
                 'setid' => $setid,
             ]);
+            FleetDomainOwnership::stamp($domain, $tenant !== '' ? $tenant : null);
             $domain->save();
             $created = true;
         } else {
             $domain->setid = $setid;
+            FleetDomainOwnership::stamp($domain, $tenant !== '' ? $tenant : null);
             $domain->save();
         }
         $miOk = $mi->domainReload();
@@ -278,6 +285,7 @@ class FleetSbcController extends Controller
             'created' => $created,
             'domain' => $domainName,
             'setid' => $setid,
+            'fleet_owned' => true,
             'mi_reload_ok' => $miOk,
         ], $miOk ? 200 : 502);
     }

@@ -6,6 +6,7 @@ use App\Filament\Resources\CallRouteResource\Pages;
 use App\Filament\Resources\DispatcherResource;
 use App\Models\Domain;
 use App\Models\Dispatcher;
+use App\Services\FleetDomainOwnership;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -234,7 +235,27 @@ class CallRouteResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->label('Domain')
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->description(fn (Domain $record): ?string => FleetDomainOwnership::isFleetOwned($record->attrs)
+                        ? 'Fleet-owned — retarget in Fleet (move / Repair / reconcile)'
+                        : null),
+
+                Tables\Columns\IconColumn::make('fleet_owned')
+                    ->label('Fleet')
+                    ->boolean()
+                    ->getStateUsing(fn (Domain $record): bool => FleetDomainOwnership::isFleetOwned($record->attrs))
+                    ->trueIcon('lucide-lock')
+                    ->falseIcon('lucide-pencil')
+                    ->trueColor('warning')
+                    ->falseColor('gray')
+                    ->tooltip(fn (Domain $record): string => FleetDomainOwnership::isFleetOwned($record->attrs)
+                        ? 'Projected from Fleet catalog — rename/delete/setid not offered'
+                        : 'Standalone / edge-authored'),
+
+                Tables\Columns\TextColumn::make('setid')
+                    ->label('Set ID')
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('dispatchers_count')
                     ->label('# Destinations')
@@ -254,12 +275,17 @@ class CallRouteResource extends Resource
             ->filters([
                 //
             ])
+            ->checkIfRecordIsSelectableUsing(
+                fn (Domain $record): bool => ! FleetDomainOwnership::isFleetOwned($record->attrs)
+            )
             ->actions([
                 Tables\Actions\Action::make('edit_domain')
                     ->iconButton()
                     ->icon('lucide-pencil')
                     ->tooltip('Edit domain')
                     ->color('warning')
+                    ->visible(fn (Domain $record): bool => static::canEdit($record))
+                    ->authorize(fn (Domain $record): bool => static::canEdit($record))
                     ->modalHeading(fn ($record) => 'Edit Domain: ' . $record->domain)
                     ->form([
                         Forms\Components\TextInput::make('domain')
@@ -305,8 +331,11 @@ class CallRouteResource extends Resource
                 Tables\Actions\Action::make('manage_destinations')
                     ->iconButton()
                     ->icon('lucide-server')
-                    ->tooltip('Manage destinations')
-                    ->color('info')
+                    ->tooltip(fn (Domain $record): string => FleetDomainOwnership::isFleetOwned($record->attrs)
+                        ? 'Fleet owns this set — change backends via Fleet Instances (not Magrathea)'
+                        : 'Manage destinations')
+                    ->color(fn (Domain $record): string => FleetDomainOwnership::isFleetOwned($record->attrs) ? 'gray' : 'info')
+                    ->visible(fn (Domain $record): bool => ! FleetDomainOwnership::isFleetOwned($record->attrs))
                     ->url(fn ($record) => DispatcherResource::getUrl('index', [
                         'tableFilters' => [
                             'setid' => [
@@ -315,6 +344,7 @@ class CallRouteResource extends Resource
                         ],
                     ])),
                 Tables\Actions\DeleteAction::make()
+                    ->authorize(fn (Domain $record): bool => static::canDelete($record))
                     ->requiresConfirmation()
                     ->modalHeading('Delete Domain Route')
                     ->modalDescription(fn ($record) => 
@@ -357,7 +387,16 @@ class CallRouteResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
                         ->before(function ($records) {
-                            // Delete associated dispatchers before deleting domains
+                            foreach ($records as $record) {
+                                if (FleetDomainOwnership::isFleetOwned($record->attrs)) {
+                                    Notification::make()
+                                        ->title('Fleet-owned domain routes cannot be deleted here')
+                                        ->body('Remove tenants via Fleet Delete. Magrathea must not delete fleet=domain rows.')
+                                        ->danger()
+                                        ->send();
+                                    throw new \Filament\Support\Exceptions\Halt;
+                                }
+                            }
                             foreach ($records as $record) {
                                 $record->dispatchers()->delete();
                             }

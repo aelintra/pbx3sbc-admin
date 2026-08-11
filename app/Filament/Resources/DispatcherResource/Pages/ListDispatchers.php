@@ -6,7 +6,9 @@ use App\Filament\Concerns\HasPanelBackLink;
 use App\Filament\Resources\CallRouteResource;
 use App\Filament\Resources\DispatcherResource;
 use App\Models\Domain;
+use App\Services\FleetDomainOwnership;
 use Filament\Actions;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 
 class ListDispatchers extends ListRecords
@@ -34,7 +36,11 @@ class ListDispatchers extends ListRecords
         if ($setid !== null) {
             $domain = Domain::where('setid', $setid)->first();
             if ($domain) {
-                return $domain->domain . ' Destinations';
+                $suffix = FleetDomainOwnership::setidIsFleetLocked((int) $setid)
+                    ? ' Destinations (Fleet-locked)'
+                    : ' Destinations';
+
+                return $domain->domain.$suffix;
             }
         }
 
@@ -69,13 +75,28 @@ class ListDispatchers extends ListRecords
             }
 
             $this->tableFilters['setid']['value'] = (int) $setidFilter;
+
+            if (FleetDomainOwnership::setidIsFleetLocked((int) $setidFilter)) {
+                Notification::make()
+                    ->title('Fleet owns destinations for this set')
+                    ->body('Read-only here. Change backends via Fleet Instances / node provision.')
+                    ->warning()
+                    ->send();
+            }
         }
     }
 
     protected function getHeaderActions(): array
     {
+        $setid = $this->tableFilters['setid']['value']
+            ?? request()->query('tableFilters.setid.value')
+            ?? request()->query('tableFilters')['setid']['value']
+            ?? null;
+        $fleetLocked = $setid !== null && FleetDomainOwnership::setidIsFleetLocked((int) $setid);
+
         return [
             Actions\CreateAction::make()
+                ->visible(! $fleetLocked)
                 ->url(function () {
                     $filters = request()->get('tableFilters', []);
                     $setidFilter = $filters['setid']['value'] ?? request()->query('tableFilters.setid.value') ?? null;

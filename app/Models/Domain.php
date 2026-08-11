@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\FleetDomainOwnership;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -15,18 +16,20 @@ class Domain extends Model
     
     /**
      * Boot the model.
-     * Automatically populate attrs column from setid when creating or updating.
+     * Sync setid into attrs without wiping fleet=domain (Rule 13 tag).
      */
     protected static function boot()
     {
         parent::boot();
         
         static::saving(function ($domain) {
-            // Automatically populate attrs from setid if setid is set
-            if ($domain->setid !== null && $domain->setid !== '') {
-                $domain->attrs = 'setid=' . $domain->setid;
-            }
+            $domain->attrs = FleetDomainOwnership::attrsForSave($domain->attrs, $domain->setid);
         });
+    }
+
+    public function isFleetOwned(): bool
+    {
+        return FleetDomainOwnership::isFleetOwned($this->attrs);
     }
 
     /**
