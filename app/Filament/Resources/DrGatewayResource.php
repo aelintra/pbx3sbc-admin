@@ -262,7 +262,20 @@ class DrGatewayResource extends Resource
                     ->getTitleFromRecordUsing(fn (DrGateway $record): string => $record->carrierGroupTitle())
                     ->groupQueryUsing(fn ($query) => $query)
                     ->orderQueryUsing(function ($query, string $direction) {
-                        return $query->orderBy('attrs', $direction)->orderByRaw('CAST(gwid AS UNSIGNED)');
+                        // Do NOT order by raw attrs — that splits Asterisk homes
+                        // (carrier=asterisk… vs fleet=node;role=asterisk…) across Magrathea rows.
+                        $dir = strtolower($direction) === 'desc' ? 'DESC' : 'ASC';
+
+                        return $query
+                            ->orderByRaw(
+                                "CASE
+                                    WHEN attrs LIKE '%role=asterisk%' THEN 0
+                                    WHEN attrs LIKE '%carrier=%' THEN 1
+                                    ELSE 2
+                                END {$dir}"
+                            )
+                            ->orderBy('description', $dir)
+                            ->orderByRaw('CAST(gwid AS UNSIGNED)');
                     }),
             ])
             ->defaultSort('description')
