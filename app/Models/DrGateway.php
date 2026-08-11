@@ -125,12 +125,26 @@ class DrGateway extends Model
     /** Title for Filament table groups */
     public function carrierGroupTitle(): string
     {
+        if ($this->peerRole() === self::ROLE_ASTERISK) {
+            return 'Asterisk';
+        }
         $slug = $this->carrierSlug();
         if ($slug !== '') {
             return ucwords(str_replace('-', ' ', $slug));
         }
 
         return '(ungrouped)';
+    }
+
+    /** Stable group key for Filament (Asterisk homes share one bucket). */
+    public function peerGroupKey(): string
+    {
+        if ($this->peerRole() === self::ROLE_ASTERISK) {
+            return 'asterisk';
+        }
+        $slug = $this->carrierSlug();
+
+        return $slug !== '' ? $slug : 'ungrouped';
     }
 
     public function peerRoleLabel(): string

@@ -44,12 +44,6 @@ class DrGatewayResource extends Resource
                             ->placeholder('e.g. Magrathea inbound 87.238.72.129')
                             ->helperText('Shown in Number routes when choosing where a call goes.')
                             ->columnSpanFull(),
-                        Forms\Components\TextInput::make('carrier_label')
-                            ->label('Carrier')
-                            ->required()
-                            ->maxLength(64)
-                            ->placeholder('e.g. Magrathea')
-                            ->helperText('Groups this peer with others for the same provider (stored as carrier=… in attrs).'),
                         Forms\Components\Select::make('peer_role')
                             ->label('Role')
                             ->required()
@@ -60,6 +54,13 @@ class DrGatewayResource extends Resource
                             ])
                             ->live()
                             ->helperText('Outbound: Prefer sip:fqdn:5060 (Route53). Inbound: literal signaling IPs. Asterisk: fleet node IP only (no DNS).'),
+                        Forms\Components\TextInput::make('carrier_label')
+                            ->label('Carrier')
+                            ->required(fn (Forms\Get $get): bool => $get('peer_role') !== DrGateway::ROLE_ASTERISK)
+                            ->visible(fn (Forms\Get $get): bool => $get('peer_role') !== DrGateway::ROLE_ASTERISK)
+                            ->maxLength(64)
+                            ->placeholder('e.g. Magrathea')
+                            ->helperText('Groups this peer with others for the same provider (stored as carrier=… in attrs).'),
                         Forms\Components\Select::make('number_dialect')
                             ->label('Number dialect')
                             ->options(NumberDialect::presetOptions())
@@ -257,9 +258,7 @@ class DrGatewayResource extends Resource
             ->groups([
                 Group::make('attrs')
                     ->label('Carrier')
-                    ->getKeyFromRecordUsing(fn (DrGateway $record): string => $record->carrierSlug() !== ''
-                        ? $record->carrierSlug()
-                        : 'ungrouped')
+                    ->getKeyFromRecordUsing(fn (DrGateway $record): string => $record->peerGroupKey())
                     ->getTitleFromRecordUsing(fn (DrGateway $record): string => $record->carrierGroupTitle())
                     ->groupQueryUsing(fn ($query) => $query)
                     ->orderQueryUsing(function ($query, string $direction) {
@@ -305,10 +304,16 @@ class DrGatewayResource extends Resource
      */
     public static function applyCarrierFieldsToData(array $data): array
     {
-        $label = $data['carrier_label'] ?? null;
         $role = $data['peer_role'] ?? null;
+        $label = $data['carrier_label'] ?? null;
         $dialect = $data['number_dialect'] ?? null;
         unset($data['carrier_label'], $data['peer_role'], $data['number_dialect']);
+
+        // Asterisk homes are not carriers — never keep a stale carrier= slug.
+        if ($role === DrGateway::ROLE_ASTERISK) {
+            $label = null;
+            $dialect = null;
+        }
 
         $gw = new DrGateway;
         $gw->attrs = $data['attrs'] ?? null;
