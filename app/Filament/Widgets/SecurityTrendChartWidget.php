@@ -11,6 +11,8 @@ use Illuminate\Support\HtmlString;
 
 class SecurityTrendChartWidget extends ChartWidget
 {
+    protected static string $view = 'filament.widgets.chart-widget-rescale';
+
     protected static ?string $heading = 'Security trend (last 7 days)';
 
     protected static ?int $sort = 6;
@@ -64,6 +66,9 @@ class SecurityTrendChartWidget extends ChartWidget
     protected function getOptions(): array
     {
         return [
+            // chart-widget-rescale uses a fixed-height host; fill it (do not keep
+            // aspectRatio or a full-width bar chart grows taller than the card).
+            'maintainAspectRatio' => false,
             'scales' => [
                 'y' => [
                     'beginAtZero' => true,
@@ -79,5 +84,12 @@ class SecurityTrendChartWidget extends ChartWidget
                 ],
             ],
         ];
+    }
+
+    public function updateChartData(): void
+    {
+        $this->cachedData = null;
+
+        parent::updateChartData();
     }
 }

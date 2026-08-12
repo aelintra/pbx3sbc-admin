@@ -11,6 +11,8 @@ use Illuminate\Support\HtmlString;
 
 class CallVolumeChartWidget extends ChartWidget
 {
+    protected static string $view = 'filament.widgets.chart-widget-rescale';
+
     protected static ?string $heading = 'Edge call volume (last 24h)';
 
     protected static ?int $sort = 3;
@@ -21,13 +23,22 @@ class CallVolumeChartWidget extends ChartWidget
 
     protected int | string | array $columnSpan = 1;
 
+    /**
+     * @var array{timezone: string, labels: list<string>, completed: list<int>, failed: list<int>}|null
+     */
+    private ?array $volumeSnapshot = null;
+
     public function getDescription(): string | Htmlable | null
     {
         $url = e(CdrResource::getUrl('index'));
-        $tz = e(SiteTimezone::id());
+        $v = $this->volumeCounts();
+        $tz = e($v['timezone'] ?: SiteTimezone::id());
+        $peak = $this->peakCount($v);
 
         return new HtmlString(
-            'Hourly INVITE outcomes from OpenSIPS acc (hour labels <strong>'.$tz.'</strong>). '
+            'Hourly INVITE outcomes from OpenSIPS acc (hour labels <strong>'.$tz.'</strong>'
+            . ($peak > 0 ? ', peak <strong>'.$peak.'/h</strong>' : '')
+            . '). '
             . '<a href="' . $url . '" class="font-medium text-primary-600 hover:underline">Open CDR →</a>'
         );
     }
@@ -37,9 +48,17 @@ class CallVolumeChartWidget extends ChartWidget
         return 'line';
     }
 
+    public function updateChartData(): void
+    {
+        $this->cachedData = null;
+        $this->volumeSnapshot = null;
+
+        parent::updateChartData();
+    }
+
     protected function getData(): array
     {
-        $data = app(HomeDashboardMetrics::class)->callVolumeLast24h();
+        $data = $this->volumeCounts();
 
         return [
             'datasets' => [
@@ -66,14 +85,25 @@ class CallVolumeChartWidget extends ChartWidget
 
     protected function getOptions(): array
     {
+        $peak = $this->peakCount($this->volumeCounts());
+        // Floor keeps a handful of calls from looking like a 0–1 binary chart.
+        $suggestedMax = max(4, (int) ceil($peak * 1.25));
+
+        $y = [
+            'beginAtZero' => true,
+            'suggestedMax' => $suggestedMax,
+            'ticks' => [
+                'precision' => 0,
+            ],
+        ];
+        if ($suggestedMax <= 12) {
+            $y['ticks']['stepSize'] = 1;
+        }
+
         return [
+            'maintainAspectRatio' => false,
             'scales' => [
-                'y' => [
-                    'beginAtZero' => true,
-                    'ticks' => [
-                        'precision' => 0,
-                    ],
-                ],
+                'y' => $y,
             ],
             'plugins' => [
                 'legend' => [
@@ -82,5 +112,24 @@ class CallVolumeChartWidget extends ChartWidget
                 ],
             ],
         ];
+    }
+
+    /**
+     * @return array{timezone: string, labels: list<string>, completed: list<int>, failed: list<int>}
+     */
+    private function volumeCounts(): array
+    {
+        return $this->volumeSnapshot ??= app(HomeDashboardMetrics::class)->callVolumeLast24h();
+    }
+
+    /**
+     * @param  array{completed: list<int>, failed: list<int>}  $v
+     */
+    private function peakCount(array $v): int
+    {
+        $completed = $v['completed'] ?? [];
+        $failed = $v['failed'] ?? [];
+
+        return (int) max(0, max($completed ?: [0]), max($failed ?: [0]));
     }
 }
