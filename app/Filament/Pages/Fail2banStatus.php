@@ -2,47 +2,58 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\Fail2banWhitelist;
 use App\Services\Fail2banService;
 use App\Services\WhitelistSyncService;
-use Filament\Pages\Page;
 use Filament\Notifications\Notification;
+use Filament\Pages\Page;
 use Illuminate\Support\Facades\Cache;
 
 class Fail2banStatus extends Page
 {
     protected static ?string $navigationIcon = 'lucide-shield-alert';
-    
+
     protected static string $view = 'filament.pages.fail2ban-status';
-    
+
     protected static ?string $navigationLabel = 'Status';
 
     protected static ?string $navigationGroup = 'Fail2Ban';
-    
+
     protected static ?int $navigationSort = 10;
-    
+
     public array $status = [];
+
     public array $bannedIPs = [];
+
     public string $quickUnbanIP = '';
+
     public bool $addToWhitelist = false;
+
     public string $manualBanIP = '';
-    
-    protected Fail2banService $fail2banService;
-    
+
+    /**
+     * Resolve per request — Livewire rehydration does not re-run mount(), so a
+     * typed property set only in mount() is uninitialized on later actions.
+     */
+    protected function fail2ban(): Fail2banService
+    {
+        return app(Fail2banService::class);
+    }
+
     public function mount(): void
     {
-        $this->fail2banService = app(Fail2banService::class);
         $this->loadStatus();
     }
-    
+
     public function loadStatus(): void
     {
         try {
             // Cache status for 5 seconds to avoid too many calls
             $this->status = Cache::remember('fail2ban_status', 5, function () {
-                return $this->fail2banService->getStatus();
+                return $this->fail2ban()->getStatus();
             });
             $this->bannedIPs = $this->status['banned_ips'] ?? [];
-            
+
             // Show notification if service is not running
             if (isset($this->status['error'])) {
                 Notification::make()
@@ -58,7 +69,7 @@ class Fail2banStatus extends Page
                 ->body($e->getMessage())
                 ->danger()
                 ->send();
-            
+
             $this->status = [
                 'enabled' => false,
                 'service_running' => false,
@@ -69,22 +80,22 @@ class Fail2banStatus extends Page
             $this->bannedIPs = [];
         }
     }
-    
+
     public function unbanIP(string $ip): void
     {
         try {
-            if ($this->fail2banService->unbanIP($ip)) {
+            if ($this->fail2ban()->unbanIP($ip)) {
                 Notification::make()
                     ->title('IP Unbanned')
                     ->body("IP {$ip} has been unbanned successfully.")
                     ->success()
                     ->send();
-                
+
                 // Optionally add to whitelist
                 if ($this->addToWhitelist) {
-                    $this->addToWhitelist($ip, "Auto-whitelisted after unban");
+                    $this->whitelistIp($ip, 'Auto-whitelisted after unban');
                 }
-                
+
                 // Clear cache and reload
                 Cache::forget('fail2ban_status');
                 $this->loadStatus();
@@ -103,17 +114,17 @@ class Fail2banStatus extends Page
                 ->send();
         }
     }
-    
+
     public function unbanAll(): void
     {
         try {
-            if ($this->fail2banService->unbanAll()) {
+            if ($this->fail2ban()->unbanAll()) {
                 Notification::make()
                     ->title('All IPs Unbanned')
                     ->body('All banned IPs have been unbanned.')
                     ->warning()
                     ->send();
-                
+
                 Cache::forget('fail2ban_status');
                 $this->loadStatus();
             }
@@ -125,7 +136,7 @@ class Fail2banStatus extends Page
                 ->send();
         }
     }
-    
+
     public function quickUnban(): void
     {
         if (empty($this->quickUnbanIP)) {
@@ -134,14 +145,15 @@ class Fail2banStatus extends Page
                 ->body('Please enter an IP address to unban.')
                 ->warning()
                 ->send();
+
             return;
         }
-        
+
         $this->unbanIP($this->quickUnbanIP);
         $this->quickUnbanIP = '';
         $this->addToWhitelist = false;
     }
-    
+
     public function manualBan(): void
     {
         if (empty($this->manualBanIP)) {
@@ -150,17 +162,18 @@ class Fail2banStatus extends Page
                 ->body('Please enter an IP address to ban.')
                 ->warning()
                 ->send();
+
             return;
         }
-        
+
         try {
-            if ($this->fail2banService->banIP($this->manualBanIP)) {
+            if ($this->fail2ban()->banIP($this->manualBanIP)) {
                 Notification::make()
                     ->title('IP Banned')
                     ->body("IP {$this->manualBanIP} has been banned.")
                     ->success()
                     ->send();
-                
+
                 $this->manualBanIP = '';
                 Cache::forget('fail2ban_status');
                 $this->loadStatus();
@@ -179,19 +192,19 @@ class Fail2banStatus extends Page
                 ->send();
         }
     }
-    
-    protected function addToWhitelist(string $ip, string $comment): void
+
+    protected function whitelistIp(string $ip, string $comment): void
     {
         try {
-            $whitelist = \App\Models\Fail2banWhitelist::create([
+            Fail2banWhitelist::create([
                 'ip_or_cidr' => $ip,
                 'comment' => $comment,
                 'created_by' => auth()->id(),
             ]);
-            
+
             // Sync to Fail2Ban
             app(WhitelistSyncService::class)->sync();
-            
+
             Notification::make()
                 ->title('Added to Whitelist')
                 ->body("IP {$ip} has been added to whitelist.")
