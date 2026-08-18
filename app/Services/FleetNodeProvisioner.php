@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Dispatcher;
 use App\Models\DrGateway;
+use App\Models\Fail2banWhitelist;
+use Illuminate\Support\Facades\Log;
 
 /**
  * S10.5 residue — register/update a fleet node as OpenSIPS dispatcher set + Asterisk Peer.
@@ -81,6 +83,114 @@ class FleetNodeProvisioner
     }
 
     /**
+     * Host IP from a normalized sip:IP[:port] URI (fleet backends are literal IPs).
+     */
+    public static function hostIpFromSipUri(string $uri): ?string
+    {
+        $uri = strtolower(trim($uri));
+        if (! str_starts_with($uri, 'sip:')) {
+            return null;
+        }
+        $rest = substr($uri, 4);
+        if ($rest === '') {
+            return null;
+        }
+        if (str_starts_with($rest, '[')) {
+            if (preg_match('/^\[([^\]]+)\](?::\d+)?$/', $rest, $matches)) {
+                return $matches[1];
+            }
+
+            return null;
+        }
+        if (preg_match('/^(\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?$/', $rest, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    public static function whitelistCidrForIp(string $ip): string
+    {
+        if (str_contains($ip, '/')) {
+            return $ip;
+        }
+        if (str_contains($ip, ':')) {
+            return $ip;
+        }
+
+        return "{$ip}/32";
+    }
+
+    /**
+     * Upsert fleet home IP in Fail2ban whitelist DB, unban if needed, sync jail ignoreip.
+     *
+     * @return array{
+     *   whitelisted: bool,
+     *   ip_or_cidr: string|null,
+     *   sync_ok: bool,
+     *   errors: list<string>
+     * }
+     */
+    public static function syncFail2banWhitelistForBackend(
+        string $instanceId,
+        string $backendUri,
+        ?string $sourceIp = null
+    ): array {
+        $errors = [];
+        $ip = ($sourceIp !== null && trim($sourceIp) !== '')
+            ? trim($sourceIp)
+            : self::hostIpFromSipUri($backendUri);
+        if ($ip === null || $ip === '') {
+            return [
+                'whitelisted' => false,
+                'ip_or_cidr' => null,
+                'sync_ok' => false,
+                'errors' => ['no host IP for Fail2ban whitelist'],
+            ];
+        }
+
+        $cidr = self::whitelistCidrForIp($ip);
+        $comment = "Fleet home {$instanceId}";
+
+        try {
+            Fail2banWhitelist::query()->updateOrCreate(
+                ['ip_or_cidr' => $cidr],
+                ['comment' => $comment, 'created_by' => null]
+            );
+
+            app(Fail2banService::class)->unbanIP($ip);
+
+            $syncOk = app(WhitelistSyncService::class)->sync();
+            if (! $syncOk) {
+                $errors[] = 'whitelist DB updated but Fail2ban sync failed';
+            }
+
+            return [
+                'whitelisted' => true,
+                'ip_or_cidr' => $cidr,
+                'sync_ok' => $syncOk,
+                'errors' => $errors,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('Fleet home Fail2ban whitelist failed', [
+                'instance' => $instanceId,
+                'ip' => $cidr,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'whitelisted' => false,
+                'ip_or_cidr' => $cidr,
+                'sync_ok' => false,
+                'errors' => [$e->getMessage()],
+            ];
+        }
+    }
+
+    /**
+     * S10.5 residue — register/update a fleet node as OpenSIPS dispatcher set + Asterisk Peer.
+     * Fleet-owned rows carry attrs fleet=node;instance=… (Rule 13 namespace).
+     *
      * @return array{
      *   ok: bool,
      *   created: bool,
@@ -92,7 +202,8 @@ class FleetNodeProvisioner
      *   peer_updated: bool,
      *   dry_run: bool,
      *   errors: list<string>,
-     *   message?: string
+     *   message?: string,
+     *   fail2ban_whitelist?: array<string, mixed>
      * }
      */
     public static function provision(
@@ -216,6 +327,14 @@ class FleetNodeProvisioner
             $peerUpdated = true;
         }
 
+        $fail2banWhitelist = self::syncFail2banWhitelistForBackend($instanceId, $uri, $sourceIp);
+        if (! empty($fail2banWhitelist['errors'])) {
+            Log::warning('Provision edge: Fail2ban whitelist incomplete', [
+                'instance' => $instanceId,
+                'errors' => $fail2banWhitelist['errors'],
+            ]);
+        }
+
         return [
             'ok' => true,
             'created' => $created,
@@ -227,6 +346,7 @@ class FleetNodeProvisioner
             'peer_updated' => $peerUpdated,
             'dry_run' => false,
             'errors' => [],
+            'fail2ban_whitelist' => $fail2banWhitelist,
         ];
     }
 

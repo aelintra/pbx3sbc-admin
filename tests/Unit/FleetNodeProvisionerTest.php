@@ -31,4 +31,16 @@ class FleetNodeProvisionerTest extends TestCase
         $this->assertStringContainsString('role=asterisk', $p);
         $this->assertStringContainsString('setid=2', $p);
     }
+
+    public function test_host_ip_from_sip_uri(): void
+    {
+        $this->assertSame('192.168.1.31', FleetNodeProvisioner::hostIpFromSipUri('sip:192.168.1.31:5060'));
+        $this->assertSame('54.236.153.81', FleetNodeProvisioner::hostIpFromSipUri('sip:54.236.153.81'));
+    }
+
+    public function test_whitelist_cidr_for_ip(): void
+    {
+        $this->assertSame('192.168.1.31/32', FleetNodeProvisioner::whitelistCidrForIp('192.168.1.31'));
+        $this->assertSame('10.0.0.0/24', FleetNodeProvisioner::whitelistCidrForIp('10.0.0.0/24'));
+    }
 }

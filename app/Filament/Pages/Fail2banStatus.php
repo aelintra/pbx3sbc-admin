@@ -45,9 +45,13 @@ class Fail2banStatus extends Page
         $this->loadStatus();
     }
 
-    public function loadStatus(): void
+    public function loadStatus(bool $forceRefresh = false): void
     {
         try {
+            if ($forceRefresh) {
+                Cache::forget('fail2ban_status');
+            }
+
             // Cache status for 5 seconds to avoid too many calls
             $this->status = Cache::remember('fail2ban_status', 5, function () {
                 return $this->fail2ban()->getStatus();

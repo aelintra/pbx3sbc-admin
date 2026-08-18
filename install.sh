@@ -48,6 +48,7 @@ ADMIN_EMAIL=""
 ADMIN_PASSWORD=""
 NGINX_SERVER_NAME=""
 LE_EMAIL=""
+FLEET_SERVICE_TOKEN="${PBX3_FLEET_SERVICE_TOKEN:-}"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -118,6 +119,14 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             OPENSIPS_MI_URL="$2"
+            shift 2
+            ;;
+        --fleet-service-token)
+            if [[ -z "${2:-}" ]]; then
+                echo -e "${RED}Error: --fleet-service-token requires a token${NC}"
+                exit 1
+            fi
+            FLEET_SERVICE_TOKEN="$2"
             shift 2
             ;;
         --admin-name)
@@ -1195,6 +1204,35 @@ setup_environment() {
         sed -i "s|^OPENSIPS_MI_URL=.*|OPENSIPS_MI_URL=${mi_url}|" "$ENV_FILE" 2>/dev/null || echo "OPENSIPS_MI_URL=${mi_url}" >> "$ENV_FILE"
     fi
     log_success "OpenSIPS MI URL configured: ${mi_url}"
+
+    configure_fleet_service_token
+}
+
+admin_set_env_kv() {
+    local key="$1" val="$2"
+    if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
+        if [[ "$(uname)" == "Darwin" ]]; then
+            sed -i '' "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
+        else
+            sed -i "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
+        fi
+    else
+        echo "${key}=${val}" >>"$ENV_FILE"
+    fi
+}
+
+configure_fleet_service_token() {
+    local tok="${FLEET_SERVICE_TOKEN:-}"
+    if [[ -z "$tok" && -t 0 ]]; then
+        echo -n "Fleet service token (same as gatekeeper PBX3_FLEET_SERVICE_TOKEN — Enter to skip): "
+        read -r tok || true
+    fi
+    if [[ -z "$tok" ]]; then
+        log_info "Skipping PBX3_FLEET_SERVICE_TOKEN (Provision edge API will fail until set)"
+        return 0
+    fi
+    admin_set_env_kv PBX3_FLEET_SERVICE_TOKEN "$tok"
+    log_success "Fleet service token configured (matches gatekeeper for /api/fleet/*)"
 }
 
 test_database_connection() {

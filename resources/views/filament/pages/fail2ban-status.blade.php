@@ -136,7 +136,7 @@
 
         <!-- Refresh Button -->
         <div class="flex justify-end">
-            <x-filament::button wire:click="loadStatus" color="gray">
+            <x-filament::button wire:click="loadStatus(true)" color="gray">
                 Refresh Status
             </x-filament::button>
         </div>

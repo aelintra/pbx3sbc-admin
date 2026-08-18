@@ -26,6 +26,7 @@ class WhitelistSyncService
         // Try common locations
         $commonPaths = [
             '/home/ubuntu/pbx3sbc/scripts/sync-fail2ban-whitelist.sh',
+            '/home/tech/pbx3sbc/scripts/sync-fail2ban-whitelist.sh',
             '/opt/pbx3sbc/scripts/sync-fail2ban-whitelist.sh',
             '/usr/local/pbx3sbc/scripts/sync-fail2ban-whitelist.sh',
             base_path('../pbx3sbc/scripts/sync-fail2ban-whitelist.sh'),
