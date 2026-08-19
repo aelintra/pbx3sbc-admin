@@ -1021,12 +1021,14 @@ install_dependencies() {
             log_info "You can try running: composer install --no-interaction --prefer-dist"
             exit 1
         elif [[ $INSTALL_EXIT -ne 0 ]]; then
-            log_warn "Composer install failed (exit code: $INSTALL_EXIT). Trying update..."
-            if ! $TIMEOUT_CMD env COMPOSER_ALLOW_SUPERUSER=1 composer update --no-interaction --no-plugins --prefer-dist --optimize-autoloader; then
-                log_error "Failed to install dependencies"
-                log_error "Please check your PHP version and composer.json requirements"
+            if echo "$COMPOSER_OUTPUT" | grep -q "environment file is invalid"; then
+                log_error "Laravel .env is invalid (unquoted spaces, or a docs placeholder such as <same DB password>)."
+                log_error "Fix ${ENV_FILE} then re-run. Do not composer update to work around this."
                 exit 1
             fi
+            log_error "Composer install failed (exit code: $INSTALL_EXIT)."
+            log_error "Install from composer.lock only — this installer will not run composer update."
+            exit 1
         fi
     else
         log_info "No composer.lock found. Installing dependencies..."
@@ -1182,8 +1184,7 @@ setup_environment() {
             sed -i '' "s|^DB_DATABASE=.*|DB_DATABASE=${DB_NAME}|" "$ENV_FILE"
             sed -i '' "s|^# DB_USERNAME=.*|DB_USERNAME=${DB_USER}|" "$ENV_FILE"
             sed -i '' "s|^DB_USERNAME=.*|DB_USERNAME=${DB_USER}|" "$ENV_FILE"
-            sed -i '' "s|^# DB_PASSWORD=.*|DB_PASSWORD=${DB_PASSWORD}|" "$ENV_FILE"
-            sed -i '' "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASSWORD}|" "$ENV_FILE"
+            admin_set_env_kv DB_PASSWORD "$DB_PASSWORD"
         else
             # Linux
             sed -i "s/^DB_CONNECTION=.*/DB_CONNECTION=mysql/" "$ENV_FILE"
@@ -1195,8 +1196,7 @@ setup_environment() {
             sed -i "s|^DB_DATABASE=.*|DB_DATABASE=${DB_NAME}|" "$ENV_FILE"
             sed -i "s|^# DB_USERNAME=.*|DB_USERNAME=${DB_USER}|" "$ENV_FILE"
             sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${DB_USER}|" "$ENV_FILE"
-            sed -i "s|^# DB_PASSWORD=.*|DB_PASSWORD=${DB_PASSWORD}|" "$ENV_FILE"
-            sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASSWORD}|" "$ENV_FILE"
+            admin_set_env_kv DB_PASSWORD "$DB_PASSWORD"
         fi
         
         log_success "Database configuration updated"
@@ -1216,16 +1216,139 @@ setup_environment() {
 }
 
 admin_set_env_kv() {
-    local key="$1" val="$2"
-    if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
-        if [[ "$(uname)" == "Darwin" ]]; then
-            sed -i '' "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
-        else
-            sed -i "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
-        fi
+    local key="$1" val="$2" quoted tmp
+    quoted="$(dotenv_quote "$val")"
+    tmp="$(mktemp)"
+    if [[ -f "$ENV_FILE" ]] && grep -q "^${key}=" "$ENV_FILE"; then
+        grep -v "^${key}=" "$ENV_FILE" >"$tmp"
+        echo "${key}=${quoted}" >>"$tmp"
+        cat "$tmp" >"$ENV_FILE"
     else
-        echo "${key}=${val}" >>"$ENV_FILE"
+        echo "${key}=${quoted}" >>"$ENV_FILE"
     fi
+    rm -f "$tmp"
+}
+
+dotenv_quote() {
+    local v="$1"
+    if [[ "$v" =~ [^A-Za-z0-9_./:@+-] ]]; then
+        v="${v//\\/\\\\}"
+        v="${v//\"/\\\"}"
+        printf '"%s"' "$v"
+    else
+        printf '%s' "$v"
+    fi
+}
+
+reject_docs_placeholder() {
+    local label="$1" val="$2"
+    if [[ -z "$val" ]]; then
+        return 0
+    fi
+    if looks_like_docs_placeholder "$val"; then
+        log_error "${label} looks like a docs placeholder. The installer will ask for the real value — do not paste hints from MkDocs."
+        exit 1
+    fi
+}
+
+looks_like_docs_placeholder() {
+    local val="$1"
+    [[ -z "$val" ]] && return 1
+    if [[ "$val" == *'<'* && "$val" == *'>'* ]]; then
+        return 0
+    fi
+    if [[ "$val" == YOUR_* ]]; then
+        return 0
+    fi
+    case "$(printf '%s' "$val" | tr '[:upper:]' '[:lower:]')" in
+        you@yourdomain.com|you@example.com|admin@example.com)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+admin_prompt() {
+    local var="$1" question="$2"
+    local cur ans
+    cur="${!var:-}"
+    if [[ -n "$cur" ]]; then
+        reject_docs_placeholder "$question" "$cur"
+        return 0
+    fi
+    if [[ ! -t 0 ]]; then
+        log_error "non-interactive: set $var (flag or env)"
+        exit 1
+    fi
+    read -r -p "$question: " ans || true
+    if [[ -z "$ans" ]]; then
+        log_error "$question cannot be empty"
+        exit 1
+    fi
+    reject_docs_placeholder "$question" "$ans"
+    printf -v "$var" '%s' "$ans"
+}
+
+admin_prompt_secret() {
+    local var="$1" question="$2"
+    local cur ans confirm attempts=0
+    cur="${!var:-}"
+    if [[ -n "$cur" ]]; then
+        reject_docs_placeholder "$question" "$cur"
+        return 0
+    fi
+    if [[ ! -t 0 ]]; then
+        log_error "non-interactive: set $var (flag or env)"
+        exit 1
+    fi
+    while (( attempts < 3 )); do
+        read -r -s -p "$question: " ans || true
+        echo
+        if [[ -z "$ans" ]]; then
+            log_error "password cannot be empty"
+            exit 1
+        fi
+        read -r -s -p "Confirm password: " confirm || true
+        echo
+        if [[ "$ans" == "$confirm" ]]; then
+            printf -v "$var" '%s' "$ans"
+            return 0
+        fi
+        attempts=$((attempts + 1))
+        echo "Passwords do not match. Try again." >&2
+    done
+    log_error "password confirmation failed"
+    exit 1
+}
+
+ensure_env_file() {
+    cd "$INSTALL_DIR"
+    if [[ -f "$ENV_FILE" ]]; then
+        return 0
+    fi
+    if [[ ! -f .env.example ]]; then
+        log_error ".env.example file not found"
+        exit 1
+    fi
+    cp .env.example .env
+    log_success "Created .env file from .env.example"
+}
+
+# Flags must land in .env before Composer: artisan package:discover parses dotenv.
+bootstrap_env_from_flags() {
+    ensure_env_file
+    reject_docs_placeholder "--db-password" "$DB_PASSWORD"
+    reject_docs_placeholder "--admin-email" "$ADMIN_EMAIL"
+    reject_docs_placeholder "--admin-password" "$ADMIN_PASSWORD"
+    reject_docs_placeholder "--fleet-service-token" "$FLEET_SERVICE_TOKEN"
+    reject_docs_placeholder "--server-name" "$NGINX_SERVER_NAME"
+    # Secrets stay off the docs paste; ask here so Composer sees a valid .env.
+    admin_prompt_secret DB_PASSWORD "OpenSIPS database password (from the edge installer)"
+    [[ -n "$DB_HOST" ]] && admin_set_env_kv DB_HOST "$DB_HOST"
+    [[ -n "$DB_USER" ]] && admin_set_env_kv DB_USERNAME "$DB_USER"
+    [[ -n "$DB_PASSWORD" ]] && admin_set_env_kv DB_PASSWORD "$DB_PASSWORD"
+    [[ -n "$DB_NAME" ]] && admin_set_env_kv DB_DATABASE "$DB_NAME"
+    [[ -n "$FLEET_SERVICE_TOKEN" ]] && admin_set_env_kv PBX3_FLEET_SERVICE_TOKEN "$FLEET_SERVICE_TOKEN"
 }
 
 configure_fleet_service_token() {
@@ -1404,21 +1527,15 @@ create_admin_user() {
     
     log_info "No users found. Creating admin user..."
     
-    # Use provided values or defaults
     if [[ -z "$ADMIN_NAME" ]]; then
         ADMIN_NAME="Admin"
     fi
     
-    if [[ -z "$ADMIN_EMAIL" ]]; then
-        ADMIN_EMAIL="admin@example.com"
-        log_warn "Using default admin email: $ADMIN_EMAIL"
-        log_warn "You can change it later or use --admin-email to set it now"
-    fi
-    
-    if [[ -z "$ADMIN_PASSWORD" ]]; then
-        # Generate a random password
-        ADMIN_PASSWORD=$(openssl rand -base64 12 | tr -d "=+/" | cut -c1-12)
-        log_info "Generated random password for admin user"
+    admin_prompt ADMIN_EMAIL "Filament admin email"
+    admin_prompt_secret ADMIN_PASSWORD "Filament admin password (min 10 chars)"
+    if [[ ${#ADMIN_PASSWORD} -lt 10 ]]; then
+        log_error "admin password must be at least 10 characters"
+        exit 1
     fi
     
     # Create user non-interactively using tinker
@@ -1437,13 +1554,10 @@ create_admin_user() {
         log_success "Admin user created successfully"
         echo
         echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-        echo -e "${YELLOW}Admin Credentials:${NC}"
+        echo -e "${YELLOW}Admin login:${NC}"
         echo -e "  Email:    ${GREEN}$ADMIN_EMAIL${NC}"
-        echo -e "  Password: ${GREEN}$ADMIN_PASSWORD${NC}"
+        echo -e "  Password: (the one you entered; not printed)"
         echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-        echo
-        log_warn "Please save these credentials securely!"
-        log_warn "You can change the password after logging in"
     else
         log_error "Failed to create admin user"
         log_info "You can create one manually: php artisan make:filament-user"
@@ -1670,6 +1784,7 @@ main() {
         fi
     fi
     
+    bootstrap_env_from_flags
     install_dependencies
     setup_environment
     set_permissions  # Set permissions before testing DB connection (needed for logging)
