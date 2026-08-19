@@ -1127,6 +1127,13 @@ setup_environment() {
             read -rs input_db_password
             echo
             if [[ -n "$input_db_password" ]]; then
+                local db_confirm
+                read -rs -p "Confirm password: " db_confirm
+                echo
+                if [[ "$input_db_password" != "$db_confirm" ]]; then
+                    log_error "Passwords do not match"
+                    exit 1
+                fi
                 DB_PASSWORD="$input_db_password"
             elif [[ "$DB_CONFIG_EXISTS" == "true" ]]; then
                 DB_PASSWORD="$CURRENT_PASSWORD"
