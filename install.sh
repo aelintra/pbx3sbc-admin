@@ -49,6 +49,7 @@ ADMIN_PASSWORD=""
 NGINX_SERVER_NAME=""
 LE_EMAIL=""
 FLEET_SERVICE_TOKEN="${PBX3_FLEET_SERVICE_TOKEN:-}"
+SKIP_FLEET_TOKEN=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -128,6 +129,10 @@ while [[ $# -gt 0 ]]; do
             fi
             FLEET_SERVICE_TOKEN="$2"
             shift 2
+            ;;
+        --skip-fleet-token)
+            SKIP_FLEET_TOKEN=true
+            shift
             ;;
         --admin-name)
             if [[ -z "${2:-}" ]]; then
@@ -1353,13 +1358,20 @@ bootstrap_env_from_flags() {
 
 configure_fleet_service_token() {
     local tok="${FLEET_SERVICE_TOKEN:-}"
+
+    if [[ "$SKIP_FLEET_TOKEN" == true ]]; then
+        log_info "Skipping PBX3_FLEET_SERVICE_TOKEN (--skip-fleet-token; Provision edge will fail until set)"
+        return 0
+    fi
+
     if [[ -z "$tok" && -t 0 ]]; then
-        echo -n "Fleet service token (same as gatekeeper PBX3_FLEET_SERVICE_TOKEN — Enter to skip): "
+        echo -n "Fleet service token (from control — same value on home install; required): "
         read -r tok || true
     fi
+
     if [[ -z "$tok" ]]; then
-        log_info "Skipping PBX3_FLEET_SERVICE_TOKEN (Provision edge API will fail until set)"
-        return 0
+        log_error "PBX3_FLEET_SERVICE_TOKEN required (set PBX3_FLEET_SERVICE_TOKEN, --fleet-service-token, or paste when prompted)"
+        exit 1
     fi
     admin_set_env_kv PBX3_FLEET_SERVICE_TOKEN "$tok"
     log_success "Fleet service token configured (matches gatekeeper for /api/fleet/*)"
