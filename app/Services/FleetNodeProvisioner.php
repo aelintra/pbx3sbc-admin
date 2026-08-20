@@ -121,6 +121,66 @@ class FleetNodeProvisioner
         return "{$ip}/32";
     }
 
+    public static function fleetHomeWhitelistComment(string $instanceId): string
+    {
+        return 'Fleet home '.trim($instanceId);
+    }
+
+    /**
+     * Remove fleet-home Fail2ban whitelist rows for an instance (#5e decom / IP change).
+     * Manual site NAT rows (other comments) are untouched.
+     *
+     * @return array{
+     *   ok: bool,
+     *   removed: int,
+     *   keep_cidr: string|null,
+     *   sync_ok: bool,
+     *   errors: list<string>
+     * }
+     */
+    public static function retireFail2banWhitelistForInstance(string $instanceId, ?string $keepCidr = null): array
+    {
+        $instanceId = trim($instanceId);
+        if ($instanceId === '') {
+            return [
+                'ok' => false,
+                'removed' => 0,
+                'keep_cidr' => $keepCidr,
+                'sync_ok' => false,
+                'errors' => ['instance_id required'],
+            ];
+        }
+
+        $comment = self::fleetHomeWhitelistComment($instanceId);
+        $query = Fail2banWhitelist::query()->where('comment', $comment);
+        if ($keepCidr !== null && trim($keepCidr) !== '') {
+            $query->where('ip_or_cidr', '!=', trim($keepCidr));
+        }
+
+        $removed = 0;
+        foreach ($query->get() as $row) {
+            $row->delete();
+            $removed++;
+        }
+
+        $errors = [];
+        $syncOk = true;
+        if ($removed > 0) {
+            $syncOk = app(WhitelistSyncService::class)->sync();
+            if (! $syncOk) {
+                $errors[] = 'whitelist rows removed but Fail2ban sync failed';
+            }
+        }
+
+        return [
+            'ok' => $errors === [],
+            'removed' => $removed,
+            'keep_cidr' => $keepCidr,
+            'sync_ok' => $syncOk,
+            'errors' => $errors,
+        ];
+    }
+
     /**
      * Upsert fleet home IP in Fail2ban whitelist DB, unban if needed, sync jail ignoreip.
      *
@@ -150,9 +210,11 @@ class FleetNodeProvisioner
         }
 
         $cidr = self::whitelistCidrForIp($ip);
-        $comment = "Fleet home {$instanceId}";
+        $comment = self::fleetHomeWhitelistComment($instanceId);
 
         try {
+            self::retireFail2banWhitelistForInstance($instanceId, $cidr);
+
             Fail2banWhitelist::query()->updateOrCreate(
                 ['ip_or_cidr' => $cidr],
                 ['comment' => $comment, 'created_by' => null]

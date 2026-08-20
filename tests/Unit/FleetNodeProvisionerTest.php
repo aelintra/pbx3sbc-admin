@@ -43,4 +43,9 @@ class FleetNodeProvisionerTest extends TestCase
         $this->assertSame('192.168.1.31/32', FleetNodeProvisioner::whitelistCidrForIp('192.168.1.31'));
         $this->assertSame('10.0.0.0/24', FleetNodeProvisioner::whitelistCidrForIp('10.0.0.0/24'));
     }
+
+    public function test_fleet_home_whitelist_comment(): void
+    {
+        $this->assertSame('Fleet home kid123', FleetNodeProvisioner::fleetHomeWhitelistComment('kid123'));
+    }
 }

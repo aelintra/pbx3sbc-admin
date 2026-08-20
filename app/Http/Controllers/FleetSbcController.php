@@ -365,6 +365,23 @@ class FleetSbcController extends Controller
     }
 
     /**
+     * Retire fleet-home Fail2ban whitelist rows (decommission or stale IP after EIP change).
+     * Body: { instance_id }
+     */
+    public function retireNodeWhitelist(Request $request): JsonResponse
+    {
+        $instanceId = trim((string) $request->input('instance_id', ''));
+        if ($instanceId === '') {
+            return response()->json(['message' => 'instance_id required'], 422);
+        }
+
+        $result = \App\Services\FleetNodeProvisioner::retireFail2banWhitelistForInstance($instanceId);
+        $status = ($result['ok'] ?? false) ? 200 : 502;
+
+        return response()->json($result, $status);
+    }
+
+    /**
      * Cold DR + warm-sync step 1: create local zip and upload to S3 (active VIP).
      * Body: { upload?: bool } default true
      */
