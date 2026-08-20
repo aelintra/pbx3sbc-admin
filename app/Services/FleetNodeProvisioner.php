@@ -412,6 +412,69 @@ class FleetNodeProvisioner
         ];
     }
 
+    /**
+     * Update fleet-owned Peer + dispatcher descriptions when catalog Name changes (#5b).
+     * Does not touch routing URIs or OpenSIPS MI.
+     *
+     * @return array{
+     *   ok: bool,
+     *   setid: int,
+     *   description: string,
+     *   peer_updated: bool,
+     *   dispatcher_updated: int,
+     *   errors: list<string>
+     * }
+     */
+    public static function syncNodeDescription(string $instanceId, string $description, int $setid): array
+    {
+        $instanceId = trim($instanceId);
+        $description = trim($description);
+        if ($instanceId === '') {
+            return self::fail(['instance_id required'], false, $setid, '');
+        }
+        if ($description === '') {
+            return self::fail(['description required'], false, $setid, '');
+        }
+        if ($setid < 1) {
+            return self::fail(['setid (>=1) required'], false, 0, '');
+        }
+
+        $peer = self::findAsteriskPeer($setid, $instanceId);
+        $peerUpdated = false;
+        if ($peer !== null) {
+            $peer->description = $description;
+            $peer->save();
+            $peerUpdated = true;
+        }
+
+        $dispatcherUpdated = 0;
+        foreach (Dispatcher::query()->where('setid', $setid)->get() as $row) {
+            $parsed = DrGateway::parseAttrs($row->attrs);
+            $fleetNode = ($parsed['fleet'] ?? '') === 'node';
+            $sameInstance = ($parsed['instance'] ?? '') === $instanceId || ($parsed['instance'] ?? '') === '';
+            if ($fleetNode && $sameInstance) {
+                $row->description = $description;
+                $row->save();
+                $dispatcherUpdated++;
+            }
+        }
+
+        if (! $peerUpdated && $dispatcherUpdated === 0) {
+            return self::fail([
+                "no fleet peer or dispatcher for instance {$instanceId} on setid {$setid}",
+            ], false, $setid, '');
+        }
+
+        return [
+            'ok' => true,
+            'setid' => $setid,
+            'description' => $description,
+            'peer_updated' => $peerUpdated,
+            'dispatcher_updated' => $dispatcherUpdated,
+            'errors' => [],
+        ];
+    }
+
     public static function findAsteriskPeer(int $setid, string $instanceId): ?DrGateway
     {
         return DrGateway::query()->get()->first(function (DrGateway $gw) use ($setid, $instanceId) {

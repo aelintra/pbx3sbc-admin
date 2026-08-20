@@ -17,6 +17,7 @@ Route::middleware(['fleet.token'])->prefix('fleet')->group(function () {
         ->where('domain', '[^/]+');
     Route::post('provision-node', [FleetSbcController::class, 'provisionNode']);
     Route::post('retire-node-whitelist', [FleetSbcController::class, 'retireNodeWhitelist']);
+    Route::post('sync-node-label', [FleetSbcController::class, 'syncNodeLabel']);
     Route::post('backup', [FleetSbcController::class, 'backup']);
     Route::post('warm-pull', [FleetSbcController::class, 'warmPull']);
     Route::post('le-setup', [FleetSbcController::class, 'leSetup']);

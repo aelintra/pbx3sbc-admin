@@ -382,6 +382,29 @@ class FleetSbcController extends Controller
     }
 
     /**
+     * Sync fleet instance friendly Name → Asterisk Peer + dispatcher descriptions (#5b).
+     * Body: { instance_id, description, setid }
+     */
+    public function syncNodeLabel(Request $request): JsonResponse
+    {
+        $instanceId = trim((string) $request->input('instance_id', ''));
+        $description = trim((string) $request->input('description', ''));
+        $setid = (int) $request->input('setid', 0);
+
+        if ($instanceId === '' || $description === '') {
+            return response()->json(['message' => 'instance_id and description required'], 422);
+        }
+        if ($setid < 1) {
+            return response()->json(['message' => 'setid (>=1) required'], 422);
+        }
+
+        $result = \App\Services\FleetNodeProvisioner::syncNodeDescription($instanceId, $description, $setid);
+        $status = ($result['ok'] ?? false) ? 200 : 422;
+
+        return response()->json($result, $status);
+    }
+
+    /**
      * Cold DR + warm-sync step 1: create local zip and upload to S3 (active VIP).
      * Body: { upload?: bool } default true
      */
