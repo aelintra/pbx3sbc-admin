@@ -12,6 +12,10 @@
 #   --letsencrypt          Issue Let's Encrypt cert and enable HTTPS nginx
 #   --email EMAIL          ACME contact email (required with --letsencrypt; else uses --admin-email)
 #
+# Optional site timezone (Home / CDR day buckets — IANA id):
+#   --site-timezone TZ     e.g. America/New_York (default: host /etc/timezone; Enter accepts default)
+#   PBX3_SBC_SITE_TIMEZONE env also accepted
+#
 # HTTPS can also be done later from Filament → Certificates (SPA-like panel).
 #
 
@@ -50,6 +54,7 @@ NGINX_SERVER_NAME=""
 LE_EMAIL=""
 FLEET_SERVICE_TOKEN="${PBX3_FLEET_SERVICE_TOKEN:-}"
 SKIP_FLEET_TOKEN=false
+SITE_TIMEZONE="${PBX3_SBC_SITE_TIMEZONE:-}"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -174,9 +179,17 @@ while [[ $# -gt 0 ]]; do
             LE_EMAIL="$2"
             shift 2
             ;;
+        --site-timezone)
+            if [[ -z "${2:-}" ]]; then
+                echo -e "${RED}Error: --site-timezone requires an IANA timezone (e.g. America/New_York)${NC}"
+                exit 1
+            fi
+            SITE_TIMEZONE="$2"
+            shift 2
+            ;;
         *)
             echo -e "${RED}Unknown option: $1${NC}"
-            echo "Usage: $0 --server-name FQDN [--letsencrypt --email EMAIL] [--db-host HOST] ..."
+            echo "Usage: $0 --server-name FQDN [--letsencrypt --email EMAIL] [--site-timezone IANA] [--db-host HOST] ..."
             exit 1
             ;;
     esac
@@ -1354,6 +1367,67 @@ bootstrap_env_from_flags() {
     [[ -n "$DB_PASSWORD" ]] && admin_set_env_kv DB_PASSWORD "$DB_PASSWORD"
     [[ -n "$DB_NAME" ]] && admin_set_env_kv DB_DATABASE "$DB_NAME"
     [[ -n "$FLEET_SERVICE_TOKEN" ]] && admin_set_env_kv PBX3_FLEET_SERVICE_TOKEN "$FLEET_SERVICE_TOKEN"
+    configure_site_timezone
+}
+
+# Host /etc/timezone default; optional --site-timezone / PBX3_SBC_SITE_TIMEZONE.
+# Does not run timedatectl (OS clock unchanged) — Filament Home/CDR day buckets only.
+host_timezone_default() {
+    local tz=""
+    if [[ -r /etc/timezone ]]; then
+        tz="$(tr -d '[:space:]' </etc/timezone || true)"
+    fi
+    if [[ -z "$tz" && -L /etc/localtime ]]; then
+        tz="$(readlink -f /etc/localtime 2>/dev/null | sed 's|^.*/zoneinfo/||' || true)"
+    fi
+    if [[ -z "$tz" ]]; then
+        tz="UTC"
+    fi
+    printf '%s' "$tz"
+}
+
+validate_iana_timezone() {
+    local tz="$1"
+    if [[ -z "$tz" ]]; then
+        return 1
+    fi
+    if [[ -e "/usr/share/zoneinfo/${tz}" ]]; then
+        return 0
+    fi
+    # Some images omit zoneinfo files but PHP knows the zone.
+    if command -v php >/dev/null 2>&1; then
+        php -r 'try { new DateTimeZone($argv[1]); exit(0); } catch (Throwable $e) { exit(1); }' "$tz" 2>/dev/null
+        return $?
+    fi
+    return 1
+}
+
+configure_site_timezone() {
+    local def ans tz
+    def="$(host_timezone_default)"
+    tz="${SITE_TIMEZONE:-}"
+
+    if [[ -z "$tz" && -t 0 ]]; then
+        read -r -p "Site timezone for Home/CDR day buckets [${def}]: " ans || true
+        if [[ -z "${ans:-}" ]]; then
+            tz="$def"
+        else
+            tz="$ans"
+        fi
+    elif [[ -z "$tz" ]]; then
+        tz="$def"
+        log_info "Site timezone (non-interactive): ${tz} (host default; pass --site-timezone to override)"
+    fi
+
+    tz="$(printf '%s' "$tz" | tr -d '[:space:]')"
+    if ! validate_iana_timezone "$tz"; then
+        log_error "Invalid IANA timezone: ${tz} (example: America/New_York, Europe/London, UTC)"
+        exit 1
+    fi
+
+    SITE_TIMEZONE="$tz"
+    admin_set_env_kv PBX3_SBC_SITE_TIMEZONE "$tz"
+    log_success "PBX3_SBC_SITE_TIMEZONE=${tz} (does not change OS timedatectl)"
 }
 
 configure_fleet_service_token() {
@@ -1755,6 +1829,9 @@ display_summary() {
     echo -e "  3. Log in with the admin credentials you just created"
     echo
     echo -e "${YELLOW}Configuration file:${NC} ${ENV_FILE}"
+    if [[ -n "${SITE_TIMEZONE:-}" ]]; then
+        echo -e "${YELLOW}Site timezone (Home/CDR):${NC} ${SITE_TIMEZONE}"
+    fi
     echo -e "${YELLOW}Documentation:${NC} See README.md and workingdocs/ directory"
     echo
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
