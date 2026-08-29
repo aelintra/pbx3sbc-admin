@@ -5,6 +5,7 @@ namespace App\Filament\Resources\DrRuleResource\Pages;
 use App\Filament\Concerns\HasPanelBackLink;
 
 use App\Filament\Resources\DrRuleResource;
+use App\Policies\DrRulePolicy;
 use App\Services\DrRulePrefixOverlap;
 use App\Services\FleetDidProjector;
 use App\Services\OpenSIPSMIService;
@@ -26,6 +27,19 @@ class EditDrRule extends EditRecord
             Notification::make()
                 ->title('Fleet owns this delivery route')
                 ->body('Retarget the DID or block in Fleet → DIDs (Allocate / reassign → Project). Magrathea cannot edit fleet=did Number routes.')
+                ->warning()
+                ->persistent()
+                ->send();
+
+            $this->redirect(DrRuleResource::getUrl('index'));
+
+            return;
+        }
+
+        if (DrRulePolicy::inboundLockedOnFleet($this->record)) {
+            Notification::make()
+                ->title('Inbound routes hidden in fleet mode')
+                ->body('Allocate or retarget DIDs in Fleet → DIDs. Filament inbound Number routes are disabled on this fleet-joined SBC.')
                 ->warning()
                 ->persistent()
                 ->send();

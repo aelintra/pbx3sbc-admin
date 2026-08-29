@@ -5,11 +5,15 @@ namespace App\Policies;
 use App\Models\DrRule;
 use App\Models\User;
 use App\Services\FleetDidProjector;
+use App\Support\FleetMode;
 
 /**
  * Fleet-owned dr_rules (attrs fleet=did;...) are projected from the catalog.
  * Magrathea must not offer edit/delete — retarget via Fleet DIDs only
  * (FLEET_DID_HOP1_LOCK.md / Rule 13). Standalone (non-fleet) rules unrestricted.
+ *
+ * Fleet-joined Magrathea: inbound (groupid 1) Filament mutate is hidden/denied —
+ * footgun vs Fleet DIDs. Code + projector remain; reopen later for non-fleet backends.
  */
 class DrRulePolicy
 {
@@ -30,11 +34,19 @@ class DrRulePolicy
 
     public function update(?User $user, DrRule $drRule): bool
     {
+        if (self::inboundLockedOnFleet($drRule)) {
+            return false;
+        }
+
         return ! FleetDidProjector::isFleetOwned($drRule->attrs);
     }
 
     public function delete(?User $user, DrRule $drRule): bool
     {
+        if (self::inboundLockedOnFleet($drRule)) {
+            return false;
+        }
+
         return ! FleetDidProjector::isFleetOwned($drRule->attrs);
     }
 
@@ -50,6 +62,10 @@ class DrRulePolicy
 
     public function forceDelete(?User $user, DrRule $drRule): bool
     {
+        if (self::inboundLockedOnFleet($drRule)) {
+            return false;
+        }
+
         return ! FleetDidProjector::isFleetOwned($drRule->attrs);
     }
 
@@ -60,6 +76,16 @@ class DrRulePolicy
 
     public function replicate(?User $user, DrRule $drRule): bool
     {
+        if (self::inboundLockedOnFleet($drRule)) {
+            return false;
+        }
+
         return ! FleetDidProjector::isFleetOwned($drRule->attrs);
+    }
+
+    /** Inbound Number routes — Filament mutate denied when fleet-joined. */
+    public static function inboundLockedOnFleet(DrRule $drRule): bool
+    {
+        return FleetMode::joined() && (string) $drRule->groupid === FleetDidProjector::INBOUND_GROUP;
     }
 }

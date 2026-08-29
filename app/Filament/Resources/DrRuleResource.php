@@ -7,6 +7,7 @@ use App\Models\DrGateway;
 use App\Models\DrRule;
 use App\Services\DrRulePrefixOverlap;
 use App\Services\FleetDidProjector;
+use App\Support\FleetMode;
 use Filament\Forms;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -33,27 +34,55 @@ class DrRuleResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Number routes';
 
+    /** @return array<string, string> */
+    public static function directionOptions(): array
+    {
+        $out = [
+            '0' => 'Outbound — fleet dials PSTN (pick carrier peer)',
+        ];
+        if (! FleetMode::joined()) {
+            $out['1'] = 'Inbound — carrier DID arrives (pick Asterisk destination)';
+        }
+
+        return $out;
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        if (FleetMode::joined()) {
+            // Hide inbound list/create footgun; Fleet DIDs + projector still own hop-1.
+            $query->where('groupid', '0');
+        }
+
+        return $query;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Section::make('What this route does')
-                    ->description('Match a dialled or inbound number prefix, then send the call to one or more peers (in order).')
+                    ->description(fn (): string => FleetMode::joined()
+                        ? 'Match an outbound dialled prefix, then send the call to one or more carrier peers (in order). Inbound DID delivery is Fleet → DIDs (not authored here).'
+                        : 'Match a dialled or inbound number prefix, then send the call to one or more peers (in order).')
                     ->schema([
                         Forms\Components\Select::make('groupid')
                             ->label('Direction')
-                            ->options([
-                                '0' => 'Outbound — fleet dials PSTN (pick carrier peer)',
-                                '1' => 'Inbound — carrier DID arrives (pick Asterisk destination)',
-                            ])
+                            ->options(fn (): array => static::directionOptions())
+                            ->default('0')
                             ->required()
                             ->native(false)
                             ->live()
+                            ->disabled(fn (): bool => FleetMode::joined())
+                            ->dehydrated()
                             ->afterStateUpdated(function (Set $set): void {
                                 // Direction change invalidates peer picks (inbound≠carrier).
                                 $set('gwlist', []);
                             })
-                            ->helperText('Outbound runs when Asterisk sends a long number to the SBC. Inbound runs for trusted carrier INVITEs.'),
+                            ->helperText(fn (): string => FleetMode::joined()
+                                ? 'Fleet-joined SBC: outbound only. Allocate inbound DIDs in Fleet → DIDs.'
+                                : 'Outbound runs when Asterisk sends a long number to the SBC. Inbound runs for trusted carrier INVITEs.'),
                         Forms\Components\TextInput::make('prefix')
                             ->label('Number prefix')
                             ->maxLength(64)
@@ -295,10 +324,12 @@ class DrRuleResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('groupid')
                     ->label('Direction')
-                    ->options([
-                        '0' => 'Outbound',
-                        '1' => 'Inbound',
-                    ]),
+                    ->options(fn (): array => FleetMode::joined()
+                        ? ['0' => 'Outbound']
+                        : [
+                            '0' => 'Outbound',
+                            '1' => 'Inbound',
+                        ]),
                 Tables\Filters\SelectFilter::make('peer')
                     ->label('Peer')
                     ->options(fn () => DrGateway::optionsForSelect())
