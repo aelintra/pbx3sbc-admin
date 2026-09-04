@@ -11,21 +11,67 @@
 
 @import '../../../../vendor/filament/filament/resources/css/base.css';
 
-/* --- Light mode: SPA kinship surfaces --- */
+/* --- Light mode: SPA kinship surfaces ---
+ * Use explicit hexes — panel gray is Color::Slate, so Tailwind gray-50 ≠ SPA #f9fafb.
+ */
 .fi-body {
-    @apply bg-gray-50;
+    background-color: #f9fafb !important; /* SPA --pbx-canvas */
+}
+
+/* Login / simple pages — SPA LoginView kinship: open canvas, no white card */
+.fi-simple-layout {
+    background-color: #f9fafb !important;
+}
+
+.fi-simple-main {
+    max-width: 26rem !important; /* SPA .login-form */
+    background-color: transparent !important;
+    box-shadow: none !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+    --tw-ring-offset-width: 0px !important;
+    --tw-ring-color: transparent !important;
+    border-radius: 0 !important;
+    padding: 1rem !important;
+}
+
+.fi-simple-header {
+    align-items: flex-start !important;
+}
+
+/* Login brand mark = SPA .login-title (sidebar keeps 2rem BrandMark) */
+.fi-simple-layout .pbx-brand-mark {
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.2 !important;
+}
+
+/* Filament “Sign in” → SPA .subtitle under the brand title */
+.fi-simple-header-heading {
+    text-align: left !important;
+    font-size: 0.875rem !important;
+    font-weight: 400 !important;
+    letter-spacing: normal !important;
+    color: #64748b !important;
+    margin-top: 0.25rem !important;
+}
+
+.fi-simple-header-subheading {
+    text-align: left !important;
+    color: #64748b !important; /* SPA .subtitle */
 }
 
 .fi-sidebar {
-    @apply !bg-gray-100;
+    background-color: #f3f4f6 !important; /* SPA --pbx-surface-subtle */
 }
 
 .fi-sidebar-header {
-    @apply !bg-gray-100;
+    background-color: #f3f4f6 !important;
 }
 
 .fi-topbar {
-    @apply !bg-gray-50;
+    background-color: #f9fafb !important;
 }
 
 /* SPA .topbar: padding 0.75rem 1.5rem — Filament defaults to h-16 (64px) */
@@ -37,10 +83,10 @@
     padding-bottom: 0.75rem !important;
     padding-left: 1.5rem !important;
     padding-right: 1.5rem !important;
+    background-color: #f9fafb !important;
     box-shadow: none !important;
     --tw-ring-shadow: 0 0 #0000 !important;
     --tw-ring-offset-shadow: 0 0 #0000 !important;
-    @apply !bg-gray-50 !shadow-none !ring-0;
 }
 
 /*
@@ -180,7 +226,7 @@
 
 .fi-main,
 .fi-main-ctn {
-    @apply bg-gray-50;
+    background-color: #f9fafb !important; /* SPA --pbx-canvas */
 }
 
 /* SPA kinship: list rows share the panel canvas (--pbx-canvas / gray-50) */
@@ -286,7 +332,7 @@
 }
 
 /*
- * SPA kinship: PBX³ BrandMark in sidebar header; topbar shows mode label (SBC).
+ * SPA kinship: PBX³SBC BrandMark in sidebar header; topbar shows mode label (SBC).
  * Header height matches SPA BrandMark / former spacer.
  */
 .fi-sidebar-header {
@@ -303,7 +349,10 @@
     box-shadow: none !important;
     --tw-ring-shadow: 0 0 #0000 !important;
     --tw-ring-offset-shadow: 0 0 #0000 !important;
-    @apply !bg-gray-100 !shadow-none !ring-0;
+    background-color: #f3f4f6 !important;
+    box-shadow: none !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
 }
 
 .fi-sidebar-header .fi-logo {
