@@ -70,9 +70,23 @@ class DomainPolicyTest extends TestCase
     public function test_stamp_sets_fleet_domain(): void
     {
         $domain = new Domain(['domain' => 'x.pbx3.com', 'setid' => 2, 'attrs' => 'setid=2']);
-        FleetDomainOwnership::stamp($domain, '9wvvnb');
+        FleetDomainOwnership::stamp($domain, '9wvvnb', 'Aelintra');
         $this->assertTrue(FleetDomainOwnership::isFleetOwned($domain->attrs));
         $this->assertStringContainsString('tenant=9wvvnb', (string) $domain->attrs);
+        $this->assertStringContainsString('label=Aelintra', (string) $domain->attrs);
+        $this->assertSame('Aelintra', FleetDomainOwnership::labelFromAttrs($domain->attrs));
+    }
+
+    public function test_sanitize_label_strips_attr_delimiters(): void
+    {
+        $this->assertSame('Acme Corp x', FleetDomainOwnership::sanitizeLabel('Acme;Corp=x'));
+    }
+
+    public function test_attrs_for_save_preserves_label(): void
+    {
+        $attrs = FleetDomainOwnership::attrsForSave('fleet=domain;tenant=abc;label=Acme;setid=1', 3);
+        $this->assertStringContainsString('label=Acme', (string) $attrs);
+        $this->assertSame('Acme', FleetDomainOwnership::labelFromAttrs($attrs));
     }
 
     public function test_fleet_node_destination_detected(): void

@@ -133,7 +133,13 @@ class FleetSbcController extends Controller
 
         $previous = (int) $domain->setid;
         $domain->setid = $destSetid;
-        FleetDomainOwnership::stamp($domain);
+        $tenant = trim((string) $request->input('tenant_shortuid', ''));
+        $label = trim((string) ($request->input('label') ?: $request->input('description') ?: ''));
+        FleetDomainOwnership::stamp(
+            $domain,
+            $tenant !== '' ? $tenant : null,
+            $label !== '' ? $label : null
+        );
         $domain->save();
         $miOk = $mi->domainReload();
 
@@ -142,6 +148,7 @@ class FleetSbcController extends Controller
             'tenant_domain' => $domainName,
             'previous_setid' => $previous,
             'dest_setid' => $destSetid,
+            'label' => FleetDomainOwnership::labelFromAttrs($domain->attrs),
             'mi_reload_ok' => $miOk,
         ], $miOk ? 200 : 502);
     }
@@ -245,7 +252,8 @@ class FleetSbcController extends Controller
 
     /**
      * S10.5 — ensure tenant SIP domain row exists (catalog → edge).
-     * Body: { domain, setid, description? }
+     * Body: { domain, setid, tenant_shortuid?, label?|description? }
+     * label/description = catalog-friendly name projected into attrs (Domain Routes UI).
      */
     public function registerDomain(Request $request, OpenSIPSMIService $mi): JsonResponse
     {
@@ -263,6 +271,7 @@ class FleetSbcController extends Controller
         }
 
         $tenant = trim((string) $request->input('tenant_shortuid', ''));
+        $label = trim((string) ($request->input('label') ?: $request->input('description') ?: ''));
         $domain = Domain::query()->where('domain', $domainName)->first();
         $created = false;
         if ($domain === null) {
@@ -270,12 +279,20 @@ class FleetSbcController extends Controller
                 'domain' => $domainName,
                 'setid' => $setid,
             ]);
-            FleetDomainOwnership::stamp($domain, $tenant !== '' ? $tenant : null);
+            FleetDomainOwnership::stamp(
+                $domain,
+                $tenant !== '' ? $tenant : null,
+                $label !== '' ? $label : null
+            );
             $domain->save();
             $created = true;
         } else {
             $domain->setid = $setid;
-            FleetDomainOwnership::stamp($domain, $tenant !== '' ? $tenant : null);
+            FleetDomainOwnership::stamp(
+                $domain,
+                $tenant !== '' ? $tenant : null,
+                $label !== '' ? $label : null
+            );
             $domain->save();
         }
         $miOk = $mi->domainReload();
@@ -285,6 +302,7 @@ class FleetSbcController extends Controller
             'created' => $created,
             'domain' => $domainName,
             'setid' => $setid,
+            'label' => FleetDomainOwnership::labelFromAttrs($domain->attrs),
             'fleet_owned' => true,
             'mi_reload_ok' => $miOk,
         ], $miOk ? 200 : 502);

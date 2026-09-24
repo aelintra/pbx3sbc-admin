@@ -76,14 +76,41 @@ class FleetDomainOwnership
     }
 
     /**
-     * Merge fleet=domain (+ optional tenant) onto attrs; always keep setid=N in sync.
+     * Catalog-friendly display name projected onto domain attrs (label=…).
+     * Semicolon / equals stripped so OpenSIPS k=v attrs stay parseable.
      */
-    public static function stamp(Domain $domain, ?string $tenantShortuid = null): void
+    public static function sanitizeLabel(string $label): string
+    {
+        $label = trim(str_replace([';', '='], ' ', $label));
+        $label = preg_replace('/\s+/', ' ', $label) ?? $label;
+
+        return trim($label);
+    }
+
+    public static function labelFromAttrs(?string $attrs): ?string
+    {
+        $parsed = DrGateway::parseAttrs($attrs);
+        $label = trim((string) ($parsed['label'] ?? ''));
+
+        return $label !== '' ? $label : null;
+    }
+
+    /**
+     * Merge fleet=domain (+ optional tenant shortuid + catalog label) onto attrs;
+     * always keep setid=N in sync.
+     */
+    public static function stamp(Domain $domain, ?string $tenantShortuid = null, ?string $label = null): void
     {
         $parsed = DrGateway::parseAttrs($domain->attrs);
         $parsed['fleet'] = self::FLEET_VALUE;
         if ($tenantShortuid !== null && $tenantShortuid !== '') {
             $parsed['tenant'] = $tenantShortuid;
+        }
+        if ($label !== null && $label !== '') {
+            $clean = self::sanitizeLabel($label);
+            if ($clean !== '') {
+                $parsed['label'] = $clean;
+            }
         }
         if ($domain->setid !== null && $domain->setid !== '') {
             $parsed['setid'] = (string) $domain->setid;

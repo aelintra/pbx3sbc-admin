@@ -70,7 +70,13 @@ class Domain extends Model
         
         return $destinations->take(3)->map(function ($dispatcher) {
             $status = $dispatcher->state == 0 ? '✓' : '✗';
-            return "{$status} {$dispatcher->destination}";
+            $uri = (string) $dispatcher->destination;
+            $name = trim((string) ($dispatcher->description ?? ''));
+            if ($name !== '') {
+                return "{$status} {$name} — {$uri}";
+            }
+
+            return "{$status} {$uri}";
         })->join(', ') . ($destinations->count() > 3 ? '...' : '');
     }
 }

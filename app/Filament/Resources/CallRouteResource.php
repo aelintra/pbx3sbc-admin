@@ -40,6 +40,9 @@ class CallRouteResource extends Resource
                         Forms\Components\Placeholder::make('domain_view')
                             ->label('Domain')
                             ->content(fn ($livewire) => $livewire->getRecord()?->domain ?? '—'),
+                        Forms\Components\Placeholder::make('label_view')
+                            ->label('Name')
+                            ->content(fn ($livewire) => FleetDomainOwnership::labelFromAttrs($livewire->getRecord()?->attrs) ?? '—'),
                         Forms\Components\Placeholder::make('setid_view')
                             ->label('Set ID')
                             ->content(fn ($livewire) => (string) ($livewire->getRecord()?->setid ?? '—')),
@@ -236,9 +239,18 @@ class CallRouteResource extends Resource
                     ->sortable()
                     ->label('Domain')
                     ->weight('bold')
-                    ->description(fn (Domain $record): ?string => FleetDomainOwnership::isFleetOwned($record->attrs)
-                        ? 'Fleet-owned — retarget in Fleet (move / Repair / reconcile)'
-                        : null),
+                    ->description(function (Domain $record): ?string {
+                        $parts = [];
+                        $label = FleetDomainOwnership::labelFromAttrs($record->attrs);
+                        if ($label !== null) {
+                            $parts[] = $label;
+                        }
+                        if (FleetDomainOwnership::isFleetOwned($record->attrs)) {
+                            $parts[] = 'Fleet-owned — retarget in Fleet (move / Repair / reconcile)';
+                        }
+
+                        return $parts !== [] ? implode(' · ', $parts) : null;
+                    }),
 
                 Tables\Columns\IconColumn::make('fleet_owned')
                     ->label('Fleet')
