@@ -448,12 +448,21 @@ class FleetNodeProvisioner
         }
 
         $dispatcherUpdated = 0;
-        foreach (Dispatcher::query()->where('setid', $setid)->get() as $row) {
+        $rows = Dispatcher::query()->where('setid', $setid)->get();
+        foreach ($rows as $row) {
             $parsed = DrGateway::parseAttrs($row->attrs);
             $fleetNode = ($parsed['fleet'] ?? '') === 'node';
             $sameInstance = ($parsed['instance'] ?? '') === $instanceId || ($parsed['instance'] ?? '') === '';
-            if ($fleetNode && $sameInstance) {
+            // Match provision update: tagged fleet=node for this instance, or sole dest in set
+            // (lab rows may only have source_ip=… without fleet=node).
+            if (($fleetNode && $sameInstance) || $rows->count() === 1) {
                 $row->description = $description;
+                if (! $fleetNode || ($parsed['instance'] ?? '') === '') {
+                    $row->attrs = self::fleetDispatcherAttrs(
+                        $instanceId,
+                        isset($parsed['source_ip']) ? (string) $parsed['source_ip'] : null
+                    );
+                }
                 $row->save();
                 $dispatcherUpdated++;
             }

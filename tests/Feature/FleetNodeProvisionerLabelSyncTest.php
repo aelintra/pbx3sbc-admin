@@ -80,6 +80,40 @@ class FleetNodeProvisionerLabelSyncTest extends TestCase
         $this->assertSame('Lab Home', Dispatcher::query()->where('setid', 3)->value('description'));
     }
 
+    public function test_sync_node_description_updates_sole_dispatcher_without_fleet_tag(): void
+    {
+        $attrs = FleetNodeProvisioner::fleetPeerAttrs('bzy54n', 3);
+        DrGateway::query()->create([
+            'gwid' => '12',
+            'type' => 0,
+            'address' => 'sip:54.158.236.215:5060',
+            'strip' => 0,
+            'attrs' => $attrs,
+            'probe_mode' => 0,
+            'state' => 0,
+            'description' => 'Sirius',
+        ]);
+
+        Dispatcher::query()->create([
+            'setid' => 3,
+            'destination' => 'sip:54.158.236.215:5060',
+            'state' => 0,
+            'probe_mode' => 0,
+            'weight' => 1,
+            'priority' => 0,
+            'attrs' => 'source_ip=54.158.236.215',
+            'description' => 'bzy54n fleet node',
+        ]);
+
+        $result = FleetNodeProvisioner::syncNodeDescription('bzy54n', 'Sirius', 3);
+
+        $this->assertTrue($result['ok']);
+        $this->assertSame(1, $result['dispatcher_updated']);
+        $this->assertSame('Sirius', Dispatcher::query()->where('setid', 3)->value('description'));
+        $this->assertStringContainsString('fleet=node', (string) Dispatcher::query()->where('setid', 3)->value('attrs'));
+        $this->assertStringContainsString('instance=bzy54n', (string) Dispatcher::query()->where('setid', 3)->value('attrs'));
+    }
+
     public function test_sync_node_description_fails_when_nothing_to_update(): void
     {
         $result = FleetNodeProvisioner::syncNodeDescription('missing', 'Lab Home', 99);

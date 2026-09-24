@@ -34,11 +34,16 @@ class FleetSbcController extends Controller
         $domains = Domain::query()
             ->orderBy('domain')
             ->get(['domain', 'setid', 'attrs'])
-            ->map(static fn (Domain $d): array => [
-                'domain' => (string) $d->domain,
-                'setid' => (int) $d->setid,
-                'fleet_owned' => FleetDomainOwnership::isFleetOwned($d->attrs),
-            ])
+            ->map(static function (Domain $d): array {
+                $label = FleetDomainOwnership::labelFromAttrs($d->attrs);
+
+                return [
+                    'domain' => (string) $d->domain,
+                    'setid' => (int) $d->setid,
+                    'fleet_owned' => FleetDomainOwnership::isFleetOwned($d->attrs),
+                    'label' => $label,
+                ];
+            })
             ->values()
             ->all();
 
@@ -50,19 +55,39 @@ class FleetSbcController extends Controller
 
     /**
      * Live dispatcher setids (sets with ≥1 destination) — catalog setid must be one of these.
+     * Includes projected Name (description) for Domain Routes / reconcile label checks.
      */
     public function listDispatcherSets(): JsonResponse
     {
         $rows = Dispatcher::query()
-            ->selectRaw('setid, COUNT(*) as destinations')
-            ->groupBy('setid')
             ->orderBy('setid')
-            ->get();
+            ->orderBy('id')
+            ->get(['setid', 'description', 'attrs']);
 
-        $sets = $rows->map(static fn ($row): array => [
-            'setid' => (int) $row->setid,
-            'destinations' => (int) $row->destinations,
-        ])->values()->all();
+        $bySet = [];
+        foreach ($rows as $row) {
+            $setid = (int) $row->setid;
+            if ($setid < 1) {
+                continue;
+            }
+            if (! isset($bySet[$setid])) {
+                $parsed = DrGateway::parseAttrs($row->attrs);
+                $bySet[$setid] = [
+                    'setid' => $setid,
+                    'destinations' => 0,
+                    'description' => trim((string) ($row->description ?? '')),
+                    'instance' => isset($parsed['instance']) ? (string) $parsed['instance'] : null,
+                ];
+            }
+            $bySet[$setid]['destinations']++;
+            // Prefer a non-empty description if the first row was blank.
+            if ($bySet[$setid]['description'] === '') {
+                $bySet[$setid]['description'] = trim((string) ($row->description ?? ''));
+            }
+        }
+
+        $sets = array_values($bySet);
+        usort($sets, static fn (array $a, array $b): int => $a['setid'] <=> $b['setid']);
 
         return response()->json([
             'ok' => true,
