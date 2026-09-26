@@ -45,4 +45,12 @@ return [
 
     'timezone_file' => env('PBX3_SBC_TIMEZONE_FILE', '/etc/timezone'),
 
+    /** Management access (Filament :443 UFW lockdown) state JSON */
+    'management_access_state_path' => env(
+        'PBX3_SBC_MANAGEMENT_ACCESS_STATE',
+        storage_path('app/management-access.json')
+    ),
+
+    'management_access_apply_script' => env('PBX3_SBC_MANAGEMENT_ACCESS_APPLY', ''),
+
 ];
