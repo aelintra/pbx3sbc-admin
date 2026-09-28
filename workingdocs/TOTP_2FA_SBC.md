@@ -68,4 +68,4 @@ Then sign in with password only and re-enable 2FA from Profile.
 
 Package/composer upgrade must run migrations (includes `breezy_sessions`). Existing admins keep password-only until they enroll.
 
-Operator install docs: **pbx3-docs** → Fleet → [Install SBC edge](https://aelintra.github.io/pbx3-docs/fleet/install-sbc/) § Admin TOTP 2FA.
+Operator install docs: **pbx3-docs** → Fleet → [Install SBC edge](https://pbx3-oss.github.io/pbx3-docs/fleet/install-sbc/) § Admin TOTP 2FA.
