@@ -25,7 +25,7 @@ class EditDispatcher extends EditRecord
         if (! FleetDomainOwnership::destinationMutateAllowed($this->record)) {
             Notification::make()
                 ->title('Fleet owns this destination')
-                ->body('Change backends via Fleet Instances / node provision. Magrathea cannot edit fleet-locked destinations.')
+                ->body('Change backends via Fleet Instances / node provision. SBC admin cannot edit fleet-locked destinations.')
                 ->warning()
                 ->persistent()
                 ->send();

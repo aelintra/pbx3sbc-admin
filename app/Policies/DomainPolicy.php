@@ -8,7 +8,7 @@ use App\Services\FleetDomainOwnership;
 
 /**
  * Fleet-owned domain rows (attrs fleet=domain) are projected from the catalog.
- * Magrathea must not offer rename / setid edit / delete — use Fleet
+ * SBC admin must not offer rename / setid edit / delete — use Fleet
  * (FLEET_DOMAIN_SETID_LOCK.md / Rule 13). Standalone domains unrestricted.
  */
 class DomainPolicy

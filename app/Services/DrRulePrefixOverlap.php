@@ -203,7 +203,7 @@ class DrRulePrefixOverlap
         return 'Cannot place this inbound prefix '.$relation
             ." Fleet-owned rule {$conflict['ruleid']} (prefix “{$conflict['prefix']}”{$label}). "
             .'OpenSIPS longest-prefix match would subdivide or shadow hop-1 delivery. '
-            .'Retarget in Fleet → DIDs — Magrathea must not nest with fleet=did routes.';
+            .'Retarget in Fleet → DIDs — SBC admin must not nest with fleet=did routes.';
     }
 
     /**

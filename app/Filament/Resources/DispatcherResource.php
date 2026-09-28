@@ -203,7 +203,7 @@ class DispatcherResource extends Resource
                                 if (! FleetDomainOwnership::destinationMutateAllowed($record)) {
                                     Notification::make()
                                         ->title('Fleet owns destinations for this set')
-                                        ->body('Change backends via Fleet Instances / node provision. Magrathea must not edit fleet-locked destinations.')
+                                        ->body('Change backends via Fleet Instances / node provision. SBC admin must not edit fleet-locked destinations.')
                                         ->danger()
                                         ->send();
                                     throw new \Filament\Support\Exceptions\Halt;

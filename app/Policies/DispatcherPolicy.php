@@ -8,7 +8,7 @@ use App\Services\FleetDomainOwnership;
 
 /**
  * Destinations on fleet-locked setids (or fleet=node rows) are catalog/node projections.
- * Magrathea must not offer create/edit/delete — use Fleet Instances / node provision.
+ * SBC admin must not offer create/edit/delete — use Fleet Instances / node provision.
  */
 class DispatcherPolicy
 {

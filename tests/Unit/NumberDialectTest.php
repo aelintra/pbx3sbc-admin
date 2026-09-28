@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 
 class NumberDialectTest extends TestCase
 {
-    public function test_magrathea_inbound_matrix(): void
+    public function test_uk_upstream_inbound_matrix(): void
     {
         $p = NumberDialect::PRESET_UK_MAGRATHEA;
         $this->assertSame('+441924918076', NumberDialect::normalizeToPlusE164('01924918076', $p));
@@ -30,7 +30,7 @@ class NumberDialectTest extends TestCase
         NumberDialect::normalizeToPlusE164('01924918076', NumberDialect::PRESET_STRICT_PLUS_E164);
     }
 
-    public function test_magrathea_outbound_render(): void
+    public function test_uk_upstream_outbound_render(): void
     {
         $p = NumberDialect::PRESET_UK_MAGRATHEA;
         $this->assertSame('+441924918076', NumberDialect::renderDial('+441924918076', $p));
@@ -52,7 +52,7 @@ class NumberDialectTest extends TestCase
 
     public function test_cross_carrier_normalize_then_render(): void
     {
-        // DID delivered Magrathea national → canonical → Gamma egress dial
+        // DID delivered upstream national → canonical → Gamma egress dial
         $canon = NumberDialect::normalizeToPlusE164('01924918076', NumberDialect::PRESET_UK_MAGRATHEA);
         $this->assertSame('+441924918076', $canon);
         $this->assertSame(

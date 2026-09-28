@@ -26,7 +26,7 @@ class EditCallRoute extends EditRecord
         if (FleetDomainOwnership::isFleetOwned($this->record->attrs)) {
             Notification::make()
                 ->title('Fleet owns this domain route')
-                ->body('Change tenant home via Fleet (move / Repair SBC domain / reconcile project). Magrathea cannot edit fleet=domain Domain Routes.')
+                ->body('Change tenant home via Fleet (move / Repair SBC domain / reconcile project). SBC admin cannot edit fleet=domain Domain Routes.')
                 ->warning()
                 ->persistent()
                 ->send();

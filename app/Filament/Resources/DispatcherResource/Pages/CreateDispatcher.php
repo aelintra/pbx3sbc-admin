@@ -28,7 +28,7 @@ class CreateDispatcher extends CreateRecord
         if ($setid !== null && FleetDomainOwnership::setidIsFleetLocked($setid)) {
             Notification::make()
                 ->title('Fleet owns destinations for this set')
-                ->body('Change backends via Fleet Instances / node provision. Magrathea cannot add destinations here.')
+                ->body('Change backends via Fleet Instances / node provision. SBC admin cannot add destinations here.')
                 ->warning()
                 ->persistent()
                 ->send();

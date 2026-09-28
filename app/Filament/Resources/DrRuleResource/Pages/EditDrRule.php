@@ -26,7 +26,7 @@ class EditDrRule extends EditRecord
         if (FleetDidProjector::isFleetOwned($this->record->attrs)) {
             Notification::make()
                 ->title('Fleet owns this delivery route')
-                ->body('Retarget the DID or block in Fleet → DIDs (Allocate / reassign → Project). Magrathea cannot edit fleet=did Number routes.')
+                ->body('Retarget the DID or block in Fleet → DIDs (Allocate / reassign → Project). SBC admin cannot edit fleet=did Number routes.')
                 ->warning()
                 ->persistent()
                 ->send();

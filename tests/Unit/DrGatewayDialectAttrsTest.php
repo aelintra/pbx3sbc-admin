@@ -11,8 +11,8 @@ class DrGatewayDialectAttrsTest extends TestCase
     public function test_set_carrier_attrs_writes_dialect(): void
     {
         $gw = new DrGateway;
-        $gw->setCarrierAttrs('Magrathea', DrGateway::ROLE_INBOUND, NumberDialect::PRESET_UK_MAGRATHEA);
-        $this->assertSame('magrathea', $gw->carrierSlug());
+        $gw->setCarrierAttrs('upstream-carrier', DrGateway::ROLE_INBOUND, NumberDialect::PRESET_UK_MAGRATHEA);
+        $this->assertSame('upstream-carrier', $gw->carrierSlug());
         $this->assertSame(DrGateway::ROLE_INBOUND, $gw->peerRole());
         $this->assertSame(NumberDialect::PRESET_UK_MAGRATHEA, $gw->numberDialect());
         $this->assertStringContainsString('dialect=uk-magrathea', (string) $gw->attrs);

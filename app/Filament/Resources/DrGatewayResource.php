@@ -41,7 +41,7 @@ class DrGatewayResource extends Resource
                             ->label('Name')
                             ->required()
                             ->maxLength(128)
-                            ->placeholder('e.g. Magrathea inbound 87.238.72.129')
+                            ->placeholder('e.g. Upstream carrier inbound 87.238.72.129')
                             ->helperText('Shown in Number routes when choosing where a call goes.')
                             ->columnSpanFull(),
                         Forms\Components\Select::make('peer_role')
@@ -59,7 +59,7 @@ class DrGatewayResource extends Resource
                             ->required(fn (Forms\Get $get): bool => $get('peer_role') !== DrGateway::ROLE_ASTERISK)
                             ->visible(fn (Forms\Get $get): bool => $get('peer_role') !== DrGateway::ROLE_ASTERISK)
                             ->maxLength(64)
-                            ->placeholder('e.g. Magrathea')
+                            ->placeholder('e.g. upstream-carrier')
                             ->helperText('Groups this peer with others for the same provider (stored as carrier=… in attrs).'),
                         Forms\Components\Select::make('number_dialect')
                             ->label('Number dialect')
@@ -75,7 +75,7 @@ class DrGatewayResource extends Resource
                             ->maxLength(128)
                             ->placeholder(fn (Forms\Get $get): string => $get('peer_role') === DrGateway::ROLE_ASTERISK
                                 ? 'sip:54.236.153.81:5060'
-                                : 'sip:sipipgw.magrathea.net:5060')
+                                : 'sip:sipipgw.example-carrier.net:5060')
                             ->rules([
                                 fn (Forms\Get $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get): void {
                                     $uri = is_string($value) ? trim($value) : '';
@@ -263,7 +263,7 @@ class DrGatewayResource extends Resource
                     ->groupQueryUsing(fn ($query) => $query)
                     ->orderQueryUsing(function ($query, string $direction) {
                         // Do NOT order by raw attrs — that splits Asterisk homes
-                        // (carrier=asterisk… vs fleet=node;role=asterisk…) across Magrathea rows.
+                        // (carrier=asterisk… vs fleet=node;role=asterisk…) across SBC rows.
                         $dir = strtolower($direction) === 'desc' ? 'DESC' : 'ASC';
 
                         return $query

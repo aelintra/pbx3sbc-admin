@@ -39,7 +39,7 @@ class DrGateway extends Model
     ];
 
     /**
-     * Human label for selects/tables: "Magrathea inbound … (sip:…)" — gwid only as secondary.
+     * Human label for selects/tables: "Upstream carrier inbound … (sip:…)" — gwid only as secondary.
      */
     public function displayLabel(): string
     {
@@ -95,7 +95,7 @@ class DrGateway extends Model
         return implode(';', $parts);
     }
 
-    /** Normalize operator "Magrathea" / " magrathea " → slug magrathea */
+    /** Normalize operator carrier label → carrier slug */
     public static function normalizeCarrierSlug(?string $labelOrSlug): string
     {
         $s = strtolower(trim((string) $labelOrSlug));

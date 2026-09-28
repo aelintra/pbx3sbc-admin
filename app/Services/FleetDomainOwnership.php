@@ -8,7 +8,7 @@ use App\Models\DrGateway;
 
 /**
  * Fleet-owned domain rows: attrs fleet=domain (catalog → project / Rule 13).
- * Magrathea must not offer edit/delete — retarget via Fleet move / Repair / reconcile.
+ * SBC admin must not offer edit/delete — retarget via Fleet move / Repair / reconcile.
  * Dispatcher destinations for a setid used by any fleet domain are the same class
  * (instance backends — Fleet node provision / catalog, not Filament).
  *
@@ -34,7 +34,7 @@ class FleetDomainOwnership
     }
 
     /**
-     * Setid is Magrathea-locked when any fleet=domain tenant homes there,
+     * Setid is SBC-locked when any fleet=domain tenant homes there,
      * or any destination in the set is fleet=node.
      */
     public static function setidIsFleetLocked(int $setid): bool

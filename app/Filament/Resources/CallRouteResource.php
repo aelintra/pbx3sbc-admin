@@ -344,7 +344,7 @@ class CallRouteResource extends Resource
                     ->iconButton()
                     ->icon('lucide-server')
                     ->tooltip(fn (Domain $record): string => FleetDomainOwnership::isFleetOwned($record->attrs)
-                        ? 'Fleet owns this set — change backends via Fleet Instances (not Magrathea)'
+                        ? 'Fleet owns this set — change backends via Fleet Instances (not SBC admin)'
                         : 'Manage destinations')
                     ->color(fn (Domain $record): string => FleetDomainOwnership::isFleetOwned($record->attrs) ? 'gray' : 'info')
                     ->visible(fn (Domain $record): bool => ! FleetDomainOwnership::isFleetOwned($record->attrs))
@@ -403,7 +403,7 @@ class CallRouteResource extends Resource
                                 if (FleetDomainOwnership::isFleetOwned($record->attrs)) {
                                     Notification::make()
                                         ->title('Fleet-owned domain routes cannot be deleted here')
-                                        ->body('Remove tenants via Fleet Delete. Magrathea must not delete fleet=domain rows.')
+                                        ->body('Remove tenants via Fleet Delete. SBC admin must not delete fleet=domain rows.')
                                         ->danger()
                                         ->send();
                                     throw new \Filament\Support\Exceptions\Halt;

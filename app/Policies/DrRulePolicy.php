@@ -9,10 +9,10 @@ use App\Support\FleetMode;
 
 /**
  * Fleet-owned dr_rules (attrs fleet=did;...) are projected from the catalog.
- * Magrathea must not offer edit/delete — retarget via Fleet DIDs only
+ * SBC admin must not offer edit/delete — retarget via Fleet DIDs only
  * (FLEET_DID_HOP1_LOCK.md / Rule 13). Standalone (non-fleet) rules unrestricted.
  *
- * Fleet-joined Magrathea: inbound (groupid 1) Filament mutate is hidden/denied —
+ * Fleet-joined SBC: inbound (groupid 1) Filament mutate is hidden/denied —
  * footgun vs Fleet DIDs. Code + projector remain; reopen later for non-fleet backends.
  */
 class DrRulePolicy

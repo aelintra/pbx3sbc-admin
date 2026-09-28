@@ -19,7 +19,7 @@ class NumberDialect
     /** @var array<string, array<string, mixed>> */
     private const PRESETS = [
         self::PRESET_UK_MAGRATHEA => [
-            'label' => 'UK — Magrathea',
+            'label' => 'UK — Upstream carrier (PAID + RPID)',
             'inbound_accept' => ['plus_e164', 'e164_digits', 'uk_national', 'uk_idd'],
             'outbound_dial' => 'plus_e164',
             'outbound_cli_network' => ['format' => 'plus_e164', 'header' => 'paid'],

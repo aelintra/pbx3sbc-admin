@@ -32,7 +32,7 @@ class RegistrantResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Section::make('OpenSIPS → carrier REGISTER')
-                    ->description('For carriers that require the SBC to register (username/password). IP-trusted peers (e.g. Magrathea) use Peers only — no row here. Registration carriers usually need both a Peer (signaling IP / outbound) and a Registration.')
+                    ->description('For carriers that require the SBC to register (username/password). IP-trusted peers (e.g. upstream carrier) use Peers only — no row here. Registration carriers usually need both a Peer (signaling IP / outbound) and a Registration.')
                     ->schema([
                         Forms\Components\TextInput::make('registrar')
                             ->label('Registrar URI')

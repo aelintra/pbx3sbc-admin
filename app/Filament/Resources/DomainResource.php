@@ -80,7 +80,7 @@ class DomainResource extends Resource
                                 if (\App\Services\FleetDomainOwnership::isFleetOwned($record->attrs)) {
                                     \Filament\Notifications\Notification::make()
                                         ->title('Fleet-owned domains cannot be deleted here')
-                                        ->body('Use Fleet Delete. Magrathea must not delete fleet=domain rows.')
+                                        ->body('Use Fleet Delete. SBC admin must not delete fleet=domain rows.')
                                         ->danger()
                                         ->send();
                                     throw new \Filament\Support\Exceptions\Halt;
