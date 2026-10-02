@@ -53,4 +53,12 @@ return [
 
     'management_access_apply_script' => env('PBX3_SBC_MANAGEMENT_ACCESS_APPLY', ''),
 
+    /** Provision access (phone provision :41363 UFW lockdown) state JSON — C10 */
+    'provision_access_state_path' => env(
+        'PBX3_SBC_PROVISION_ACCESS_STATE',
+        storage_path('app/provision-access.json')
+    ),
+
+    'provision_access_apply_script' => env('PBX3_SBC_PROVISION_ACCESS_APPLY', ''),
+
 ];
